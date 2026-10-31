@@ -10,6 +10,12 @@ Research Resource Manager oferă studenților, cadrelor didactice și personalul
 
 - [Background](#background)
 - [Architecture](#architecture)
+- [Frontend Application](#frontend-application)
+  - [Stack & Design System](#stack--design-system)
+  - [Funcționalități & Pagini](#funcționalități--pagini)
+  - [Căutare Globală Live](#căutare-globală-live)
+  - [Izolare pe Facultăți (Student Scoping)](#izolare-pe-facultăți-student-scoping)
+  - [Integrare API & Securitate Sesiune](#integrare-api--securitate-sesiune)
 - [Database RBAC Architecture](#database-rbac-architecture)
 - [Academic Structure](#academic-structure)
 - [Database Migrations (Alembic)](#database-migrations-alembic)
@@ -18,7 +24,15 @@ Research Resource Manager oferă studenților, cadrelor didactice și personalul
 - [Schemas](#schemas)
 - [Prerequisites & Database Setup](#prerequisites--database-setup)
 - [Install](#install)
+  - [Instalare Backend](#instalare-backend)
+  - [Instalare Frontend](#instalare-frontend)
 - [Usage](#usage)
+  - [Rulare Server Backend](#rulare-server-backend)
+  - [Rulare Interfață Frontend](#rulare-interfață-frontend)
+  - [Compilare Frontend pentru Producție](#compilare-frontend-pentru-producție)
+  - [Autentificare în Swagger UI](#autentificare-în-swagger-ui-docs)
+  - [Conturi Implicite de Test](#conturi-implicite-de-test-seed-accounts)
+  - [Rulare Teste Automate](#rulare-teste-automate)
 - [API](#api)
 - [Maintainers](#maintainers)
 - [Contributing](#contributing)
@@ -36,32 +50,130 @@ Platforma rezolvă aceste provocări prin:
 
 ## Architecture
 
-Proiectul este structurat pe straturi conform principiilor Clean Architecture:
+Proiectul este structurat pe două module principale (Backend și Frontend):
 
 ```
-backend/
-├── alembic/              # Configurații și scripturi de migrări asincrone
-│   ├── versions/         # Fișierele de migrare generate
-│   ├── env.py            # Rulare migrări async peste SQLAlchemy
-│   └── script.py.mako    # Șablon curat pentru generarea fișierelor de migrare
-├── app/
-│   ├── api/
-│   │   ├── routers/       # Rute FastAPI (auth, health, etc.)
-│   │   └── schemas/       # Scheme Pydantic v2 (auth.py, users.py)
-│   ├── db/                # Conexiune SQLAlchemy 2.0 async, modele ORM și seeder roluri/permisiuni
-│   ├── dependencies/      # Injectare de dependențe (autentificare, RBAC dinamic, sesiune DB)
-│   ├── exceptions/        # Ierarhie de excepții custom pentru întregul domeniu
-│   ├── middleware/        # Middleware HTTP de securitate și exception handling global
-│   ├── repositories/      # Strat de persistență și interogări bază de date
-│   ├── services/          # Logica operațională și de business
-│   ├── utils/             # Helperi (hashing, validare, excepție de bază)
-│   ├── config.py          # Gestionare variabile de mediu cu Pydantic Settings
-│   └── main.py            # Punctul principal de intrare al aplicației FastAPI
-├── tests/                 # Teste automate pytest cu suport async
-├── alembic.ini            # Configurare mediu Alembic
-├── requirements.txt       # Dependințe Python
-└── .env.example           # Șablon variabile de mediu
+proiectIP/
+├── backend/
+│   ├── alembic/
+│   │   ├── versions/
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── routers/
+│   │   │   └── schemas/
+│   │   ├── db/
+│   │   ├── dependencies/
+│   │   ├── exceptions/
+│   │   ├── middleware/
+│   │   ├── repositories/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── config.py
+│   │   └── main.py
+│   ├── tests/
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── .env.example
+└── frontend/
+    ├── public/
+    ├── src/
+    │   ├── api/
+    │   ├── components/
+    │   │   ├── layout/
+    │   │   └── ui/
+    │   ├── context/
+    │   ├── lib/
+    │   ├── pages/
+    │   ├── types/
+    │   ├── App.tsx
+    │   ├── main.tsx
+    │   └── index.css
+    ├── package.json
+    ├── tailwind.config.js
+    ├── tsconfig.json
+    └── vite.config.ts
 ```
+
+## Frontend Application
+
+Modulul de frontend oferă o interfață complet funcțională, sincronizată în timp real cu backend-ul FastAPI prin apeluri REST și cookie-uri HttpOnly.
+
+### Stack & Design System
+
+- **Framework:** React 19, TypeScript, Vite.
+- **Styling:** Tailwind CSS configurat cu design tokens Figma (Shadcn/UI).
+- **Iconografie:** Lucide Icons.
+- **Client HTTP:** Axios configurat cu `baseURL: '/api'` și `withCredentials: true`.
+- **Rutare:** React Router DOM v7 cu protecție automată a rutelor prin `AuthContext`.
+- **Design Tokens:** Paletă cromatică curată, contrast alb-negru (`#09090b` / `#ffffff`), nuanțe neutre (`#f4f4f5`, `#e4e4e7`), tipografie precisă și badge-uri de stare.
+
+### Funcționalități & Pagini
+
+#### 1. Autentificare (`/login`)
+- Formular curat de conectare cu email și parolă.
+- Sesiunea este salvată automat în context și prin cookie securizat `access_token` (HttpOnly).
+- Redirecționare automată către `/dashboard` la autentificare reușită.
+
+#### 2. Înregistrare Cont (`/register`)
+- Formular complet de înregistrare adaptiv în funcție de rolul selectat.
+- Când este selectat rolul `STUDENT`:
+  - Se populează automat lista dinamică de facultăți active din baza de date (`GET /api/auth/faculties`).
+  - Se solicită numărul matricol.
+- Când este selectat alt rol (`PROFESOR`, `RESPONSABIL_LABORATOR`):
+  - Numărul matricol și selecția de facultate sunt ascunse.
+  - Se solicită identificatorul de angajat.
+
+#### 3. Panou de Bord (`/dashboard`)
+- Indicatori statistici agregați: Săli înregistrate, Facultăți active, Departamente didactice.
+- **Diferențiere pe roluri:**
+  - *Pentru Studenți:* Card dedicat cu cota de resurse (`0 / 4`), bară vizuală de progres, detalii despre numărul matricol și facultatea proprie.
+  - *Pentru Administratori:* Excluderea indicatorilor de cotă studențească, afișare badge *Administrator*, identificator angajat și notă dedicată privind responsabilitățile administrative.
+- Tabel cu primele săli disponibile și legături directe către cataloage.
+
+#### 4. Catalog Săli de Cercetare & Laboratoare (`/rooms`)
+- Tabel detaliat: cod sală, denumire, tip (`LABORATOR_DIDACTIC`, `LABORATOR_CERCETARE`, `SALA_SERVERE`, `SALA_CONFERINTE`), departament, etaj, capacitate, responsabil sală și stare (Activă / Inactivă).
+- **Filtrare Avansată:**
+  - Căutare liberă după cod sau nume sală.
+  - Filtrare în cascadă: Instituție → Facultate → Departament.
+  - Interval numeric de capacitate (capacitate minimă și capacitate maximă).
+  - Filtrare după etaj (Subsol, Parter, Etaj 1–5).
+  - Filtrare după stare (Toate, Doar Active, Doar Inactive).
+  - Sortare multi-criterială (Cod, Nume, Capacitate, Etaj, Dată adăugare; crescător / descrescător).
+  - Buton „Resetează filtre” și etichete (badges) eliminabile individual pentru fiecare filtru activ.
+- **Operațiuni CRUD pentru Administratori:**
+  - Buton `+ Adaugă Sală` cu formular modal validat.
+  - Buton de editare pentru fiecare sală existentă.
+  - Comutator pentru activare / dezactivare stare sală.
+  - Ștergere sală cu dialog de confirmare.
+
+#### 5. Administrare Structură Academică (`/admin/academic`)
+- Pagină dedicată exclusiv administratorilor, organizată pe 3 file:
+  - **Instituții:** Denumire, cod, oraș, adresă, comutare stare, editare, adăugare și ștergere.
+  - **Facultăți:** Denumire, cod, instituție de apartenență, contact, acțiuni CRUD.
+  - **Departamente:** Denumire, cod, facultate de apartenență, șef departament, acțiuni CRUD.
+- Formulare modale cu validare instantă și notificări de eroare sau succes.
+
+### Căutare Globală Live
+
+Bara laterală conține un câmp integrat de căutare live („Caută în RRM...”) cu debouncing de 250ms:
+- Interoghează simultan cataloagele de săli, departamente și facultăți.
+- Deschide o fereastră flotantă cu rezultate structurate pe categorii.
+- Navighează instant către sala selectată sau secțiunea corespunzătoare din structura academică.
+
+### Izolare pe Facultăți (Student Scoping)
+
+- Studenții au acces restricționat exclusiv la spațiile și departamentele din cadrul propriei facultăți.
+- În interfața `/rooms`, filtrele de instituție și facultate sunt blocate automat pe datele studentului.
+- Încercarea de accesare directă a unei săli din altă facultate returnează `404 Not Found`.
+
+### Integrare API & Securitate Sesiune
+
+- **Proxy Vite:** Toate cererile către `/api/*` sunt redirecționate către serverul FastAPI de la `http://localhost:8000`.
+- **Cookie-uri HttpOnly:** Cookie-ul `access_token` este gestionat automat de browser, prevenind expunerea token-ului în JavaScript și asigurând protecție împotriva atacurilor XSS.
+- **Header Bearer Fallback:** În paralel, token-ul este trimis și ca antet `Authorization: Bearer <token>` pentru compatibilitate cu ambele mecanisme.
+- **Rute Protejate:** Accesul la `/dashboard`, `/rooms` și `/admin/academic` este restricționat la utilizatorii autentificați; utilizatorii neautorizați sunt redirecționați la `/login`.
 
 ## Database RBAC Architecture
 
@@ -70,7 +182,7 @@ Permisiunile și rolurile sunt persistate relațional în PostgreSQL:
 - **`roles`**: `id`, `name`, `description`.
 - **`permissions`**: `id`, `code` (ex: `bookings:create`), `description`.
 - **`role_permissions`**: Tabela de asociere Many-to-Many între `role_id` și `permission_id`.
-- **`utilizatori`**: Cheie externă `role_id` către tabela `roles`.
+- **`utilizatori`**: Cheie externă `role_id` către tabela `roles` și `facultate_id` către tabela `facultati`.
 - **Inițializare automată (Seeder):** La startup-ul aplicației (`lifespan`), `seed_roles_and_permissions` populează automat tabelele cu rolurile predefinite și asociază permisiunile conform matricei de securitate.
 
 ## Academic Structure
@@ -84,17 +196,17 @@ Ierarhia academică este persistată relațional: `institutii` → `facultati` �
 | Instituție | denumire și cod unice (case-insensitive); dezactivare blocată dacă are facultăți active; ștergere blocată dacă are facultăți |
 | Facultate | instituție existentă și activă; denumire și cod unice în instituție; activare blocată dacă instituția e inactivă; dezactivare blocată dacă are departamente active; ștergere blocată dacă are departamente |
 | Departament | facultate existentă și activă; denumire și cod unice în facultate; șef doar cu rol `PROFESOR`, cont activ, maximum 2 departamente conduse; dezactivare blocată dacă are săli active; ștergere blocată dacă are săli |
-| Sală | departament existent și activ; cod unic global, denumire unică în departament; responsabil doar `RESPONSABIL_LABORATOR` sau `PROFESOR`, cont activ, maximum 25 săli active per responsabil; capacitate validată pe tip de sală (ex.: `SALA_SERVERE` maximum 10); schimbare responsabil blocată dacă este același utilizator |
+| Sală | departament existent și activ; cod unic global, denumire unică în departament; responsabil doar `RESPONSABIL_LABORATOR` sau `PROFESOR`, cont activ, maximum 25 săli active per responsabil; capacitate validată pe tip de sală; schimbare responsabil blocată dacă este același utilizator |
 | Responsabil sală | poate modifica doar `descriere` și `capacitate` pe sălile proprii; orice alt câmp → `room_fields_restricted`; alt utilizator non-admin → `not_room_responsible` |
-| Vizibilitate | utilizatorii non-admin văd doar entitățile active; responsabilul își vede și sălile inactive |
+| Vizibilitate | utilizatorii non-admin văd doar entitățile active; responsabilul își vede și sălile inactive; studenții văd doar sălile facultății proprii |
 
 Toate erorile sunt excepții custom (`app/exceptions/academic_exceptions.py`) cu răspuns JSON uniform: `{"detail": "...", "code": "..."}`.
 
 ### Date de test academice (seed)
 
-La pornirea aplicației se populează automat (idempotent): **3 instituții** (UPT, UTCN, UPB), **3 facultăți per instituție**, **6 departamente per facultate**, **6 săli per departament** (324 săli), plus utilizatori suplimentari: 3 profesori și 2 responsabili de laborator per facultate (parola `Password123!`, emailuri de tip `prof.upt.ac.3@univ.ro`, `lab.upb.en.2@univ.ro`). Conturile `prof1`, `prof2`, `lab1`, `lab2` sunt folosite pentru facultatea UPT-AC. Sălile de cercetare au ca responsabil șeful departamentului, restul sălilor sunt distribuite responsabililor de laborator.
+La pornirea aplicației se populează automat (idempotent): **3 instituții** (UPT, UTCN, UPB), **3 facultăți per instituție**, **6 departamente per facultate**, **6 săli per departament** (324 săli), plus utilizatori: 3 profesori și 2 responsabili de laborator per facultate.
 
-Rulare manuală (roluri, permisiuni, utilizatori și structură academică, toate din același fișier):
+Rulare manuală:
 ```sh
 python -m app.db.seed
 ```
@@ -113,7 +225,7 @@ alembic revision --autogenerate -m "create_initial_schema"
 alembic upgrade head
 ```
 
-Schema se creează exclusiv prin Alembic (serverul nu mai apelează `create_all` la pornire). Rulați `alembic upgrade head` înainte de prima pornire și după fiecare actualizare a modelelor. Dacă tabelele inițiale au fost create anterior fără Alembic, marcați versiunea de bază cu `alembic stamp fb2aefdda6c4` și apoi rulați `alembic upgrade head`.
+Schema se creează exclusiv prin Alembic. Rulați `alembic upgrade head` înainte de prima pornire și după fiecare actualizare a modelelor.
 
 ### Revenire la migrarea anterioară
 ```sh
@@ -166,9 +278,9 @@ Schemele Pydantic v2 sunt organizate modular în `app/api/schemas/`:
 
 ### 1. `users.py`
 - `BaseEmailSchema`: Sanitizare automată și validare email (max 100 caractere).
-- `UserCreate`: Validare strictă pentru `first_name` și `last_name` (reguli diacritice românești, unicitate nume-prenume, lungime cumulată), validare parolă puternică, `rol` (`STUDENT`, `PROFESOR`, `ADMINISTRATOR`, `RESPONSABIL_LABORATOR`), `numar_matricol`, `id_angajat`.
+- `UserCreate`: Validare strictă pentru `first_name` și `last_name`, parolă puternică, `rol`, `numar_matricol`, `id_angajat`, `facultate_id`.
 - `LoginSchema`: Email validat și parolă.
-- `UserResponse`: Răspuns API cu `id_utilizator`, `nume`, `email`, `rol`, `numar_matricol`, `id_angajat`, `is_active`, `permissions`, `created_at`.
+- `UserResponse`: Răspuns API cu `id_utilizator`, `nume`, `email`, `rol`, `numar_matricol`, `id_angajat`, `facultate_id`, `is_active`, `permissions`, `created_at`.
 - `UserFullResponse`: Detalii extinse pentru profilul complet al utilizatorului.
 - `UserUpdateSchema` & `AdminUserUpdateSchema`: Actualizare date utilizator și administrare conturi.
 
@@ -225,25 +337,32 @@ DATABASE_URL=postgresql+asyncpg://postgres:PAROLA_TA@localhost:2023/research_res
    cd backend
    ```
 
-2. Creează și activează un mediu virtual:
+2. Creează și activează mediul virtual:
    ```sh
    python -m venv .venv
-   # Windows (PowerShell):
    .\.venv\Scripts\Activate.ps1
-   # Windows (CMD):
-   .venv\Scripts\activate.bat
-   # Linux/macOS:
-   source .venv/bin/activate
    ```
 
-3. Instalează pachetele necesare:
+3. Instalează dependințele Python:
    ```sh
    pip install -r requirements.txt
    ```
 
+### Instalare Frontend
+
+1. Navighează în directorul `frontend`:
+   ```sh
+   cd frontend
+   ```
+
+2. Instalează pachetele Node.js:
+   ```sh
+   npm install
+   ```
+
 ## Usage
 
-### Rulare server backend
+### Rulare Server Backend
 
 Din directorul `backend` (cu mediul virtual activat):
 
@@ -255,19 +374,41 @@ Interfețele interactive de documentare API sunt accesibile la:
 - Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 - ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
+### Rulare Interfață Frontend
+
+Din directorul `frontend`:
+
+```sh
+npm run dev
+```
+
+Aplicația web va fi accesibilă la adresa: [http://localhost:5173](http://localhost:5173). Interfața este configurată cu proxy automat către backend-ul FastAPI (`http://localhost:8000/api`) și trimite automat cookie-urile de autentificare.
+
+### Compilare Frontend pentru Producție
+
+Pentru a verifica tipurile TypeScript și a genera bundle-ul optimizat de producție:
+
+```sh
+npm run build
+```
+
+Fișierele finale vor fi generate în directorul `frontend/dist/`. Pentru a testa local versiunea de producție:
+
+```sh
+npm run preview
+```
+
 ### Autentificare în Swagger UI (/docs)
 
 Pentru a testa endpoint-urile protejate (precum `GET /api/auth/me`):
-1. În interfața Swagger UI, apăsați butonul verde **Authorize** (cu pictogramă de lacăt deschis) din colțul din dreapta-sus.
+1. În interfața Swagger UI, apăsați butonul verde **Authorize** din colțul din dreapta-sus.
 2. Introduceți:
    - **username**: adresa de email (ex: `student1@univ.ro`)
    - **password**: parola (`Password123!`)
 3. Apăsați **Authorize**, apoi **Close**.
 4. Pictograma lacătului devine închisă, iar toate apelurile către endpoint-urile securizate vor include automat antetul `Authorization: Bearer <token>`.
 
-Apelarea directă a endpoint-ului `POST /api/auth/login` prin formularul său din pagină doar returnează JSON-ul cu token-ul în corpul răspunsului, fără ca Swagger UI să îl rețină automat în antetele cererilor următoare.
-
-### Conturi implicite de test (Seed Accounts)
+### Conturi Implicite de Test (Seed Accounts)
 
 La pornirea aplicației sau prin comanda `python -m app.db.seed`, baza de date este populată cu următoarele conturi predefinite (toate au parola: `Password123!`):
 
@@ -291,7 +432,7 @@ Rulare manuală a populării cu date de test:
 python -m app.db.seed
 ```
 
-### Rulare teste automate
+### Rulare Teste Automate
 
 ```sh
 pytest
@@ -312,10 +453,11 @@ Sistemul suportă autentificare hibridă: antet standard `Authorization: Bearer 
 
 | Metodă | Endpoint | Corp cerere | Descriere |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | `UserCreate` (`first_name`, `last_name`, `email`, `password`, `rol`, `numar_matricol`, `id_angajat`) | Înregistrare directă cont utilizator |
+| `POST` | `/api/auth/register` | `UserCreate` (`first_name`, `last_name`, `email`, `password`, `rol`, `numar_matricol`, `id_angajat`, `facultate_id`) | Înregistrare cont utilizator |
 | `POST` | `/api/auth/login` | `LoginSchema` (`email`, `password`) | Autentificare, returnare token JWT și setare cookie `access_token` (HttpOnly) |
 | `POST` | `/api/auth/logout` | - | Deconectare utilizator și ștergere cookie `access_token` |
 | `GET` | `/api/auth/me` | Header `Authorization: Bearer <token>` sau Cookie `access_token` | Obținere profil utilizator și listă permisiuni asociate |
+| `GET` | `/api/auth/faculties` | - | Listare publică a facultăților active pentru formularul de înregistrare |
 
 ### Structură academică (`/api`)
 
@@ -333,7 +475,7 @@ Citirea necesită permisiunea `structure:read` (toate rolurile), scrierea `struc
 | `POST` / `GET` | `/api/departments` | Creare / listare departamente (`facultate_id`, `institutie_id`, `sef_departament_id`) |
 | `GET` / `PATCH` / `DELETE` | `/api/departments/{id}` | Detalii / modificare / ștergere departament |
 | `POST` | `/api/departments/{id}/activate`, `/deactivate` | Activare / dezactivare |
-| `POST` / `GET` | `/api/rooms` | Creare / listare săli (`departament_id`, `facultate_id`, `institutie_id`, `responsabil_id`, `tip_sala`, `min_capacitate`) |
+| `POST` / `GET` | `/api/rooms` | Creare / listare săli (`departament_id`, `facultate_id`, `institutie_id`, `responsabil_id`, `tip_sala`, `min_capacitate`, `max_capacitate`, `etaj`, `sort_by`, `order`) |
 | `GET` | `/api/rooms/my` | Sălile pentru care utilizatorul curent este responsabil |
 | `GET` / `PATCH` / `DELETE` | `/api/rooms/{id}` | Detalii / modificare (administrator sau responsabil) / ștergere sală |
 | `PUT` | `/api/rooms/{id}/responsible` | Reasignare responsabil sală |
