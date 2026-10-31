@@ -23,7 +23,11 @@ class RoomRepository(BaseRepository[Room]):
         tip_sala: Optional[TipSala],
         is_active: Optional[bool],
         min_capacitate: Optional[int],
+        max_capacitate: Optional[int],
+        etaj: Optional[int],
         search: Optional[str],
+        sort_by: Optional[str],
+        sort_order: Optional[str],
         skip: int,
         limit: int,
     ) -> tuple[list[Room], int]:
@@ -46,6 +50,10 @@ class RoomRepository(BaseRepository[Room]):
             stmt = stmt.where(Room.is_active == is_active)
         if min_capacitate is not None:
             stmt = stmt.where(Room.capacitate >= min_capacitate)
+        if max_capacitate is not None:
+            stmt = stmt.where(Room.capacitate <= max_capacitate)
+        if etaj is not None:
+            stmt = stmt.where(Room.etaj == etaj)
         if search:
             pattern = like_pattern(search)
             stmt = stmt.where(
@@ -54,7 +62,19 @@ class RoomRepository(BaseRepository[Room]):
                     Room.cod.ilike(pattern, escape="\\"),
                 )
             )
-        return await self.paginate(db, stmt, [Room.cod.asc(), Room.id.asc()], skip, limit)
+
+        col = Room.cod
+        if sort_by == "nume":
+            col = Room.nume
+        elif sort_by == "capacitate":
+            col = Room.capacitate
+        elif sort_by == "etaj":
+            col = Room.etaj
+        elif sort_by == "created_at":
+            col = Room.created_at
+
+        order_clauses = [col.desc(), Room.id.desc()] if sort_order == "desc" else [col.asc(), Room.id.asc()]
+        return await self.paginate(db, stmt, order_clauses, skip, limit)
 
     async def count_active_by_responsible(
         self,
