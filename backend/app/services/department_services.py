@@ -20,7 +20,7 @@ from app.repositories.auth_repository import auth_repository
 from app.repositories.department_repository import department_repository
 from app.repositories.faculty_repository import faculty_repository
 from app.repositories.institution_repository import institution_repository
-from app.utils.access import is_structure_admin, resolve_active_filter
+from app.utils.access import is_structure_admin, is_student, resolve_active_filter
 from app.utils.structure_rules import DEPARTMENT_HEAD_ROLES, MAX_DEPARTMENTS_PER_HEAD
 
 
@@ -79,6 +79,9 @@ class DepartmentService:
 
     async def get(self, db: AsyncSession, actor: User, department_id: int) -> DepartmentResponse:
         department = await self._get_or_404(db, department_id)
+        if is_student(actor):
+            if actor.facultate_id is None or department.facultate_id != actor.facultate_id:
+                raise DepartmentNotFoundError(department_id)
         if not department.is_active and not is_structure_admin(actor):
             raise InactiveEntityAccessDeniedError("departament")
         return DepartmentResponse.from_model(department)
@@ -96,14 +99,28 @@ class DepartmentService:
         limit: int,
     ) -> Page[DepartmentResponse]:
         effective_active = resolve_active_filter(actor, is_active, "departament")
-        if institutie_id is not None and not await institution_repository.get_by_id(db, institutie_id):
-            raise InstitutionNotFoundError(institutie_id)
-        if facultate_id is not None and not await faculty_repository.get_by_id(db, facultate_id):
-            raise FacultyNotFoundError(facultate_id)
+        effective_facultate_id = facultate_id
+        effective_institutie_id = institutie_id
+
+        if is_student(actor):
+            if actor.facultate_id is None:
+                return Page.build([], 0, skip, limit)
+            if facultate_id is not None and facultate_id != actor.facultate_id:
+                return Page.build([], 0, skip, limit)
+            effective_facultate_id = actor.facultate_id
+            if actor.faculty:
+                if institutie_id is not None and institutie_id != actor.faculty.institutie_id:
+                    return Page.build([], 0, skip, limit)
+                effective_institutie_id = actor.faculty.institutie_id
+
+        if effective_institutie_id is not None and not await institution_repository.get_by_id(db, effective_institutie_id):
+            raise InstitutionNotFoundError(effective_institutie_id)
+        if effective_facultate_id is not None and not await faculty_repository.get_by_id(db, effective_facultate_id):
+            raise FacultyNotFoundError(effective_facultate_id)
         items, total = await department_repository.list_page(
             db,
-            facultate_id,
-            institutie_id,
+            effective_facultate_id,
+            effective_institutie_id,
             sef_departament_id,
             search.strip() if search else None,
             effective_active,

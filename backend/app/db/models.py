@@ -90,11 +90,13 @@ class User(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     numar_matricol = Column(String(100), nullable=True)
     id_angajat = Column(Integer, nullable=True)
+    facultate_id = Column(Integer, ForeignKey("facultati.id", ondelete="SET NULL"), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
     role_rel = relationship("Role", back_populates="users", lazy="joined")
+    faculty = relationship("Faculty", lazy="joined")
 
 
 class Institution(TimestampMixin, Base):

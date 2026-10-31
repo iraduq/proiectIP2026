@@ -30,7 +30,7 @@ from app.repositories.department_repository import department_repository
 from app.repositories.faculty_repository import faculty_repository
 from app.repositories.institution_repository import institution_repository
 from app.repositories.room_repository import room_repository
-from app.utils.access import is_structure_admin, resolve_active_filter
+from app.utils.access import is_structure_admin, is_student, resolve_active_filter
 from app.utils.structure_rules import (
     MAX_ROOMS_PER_RESPONSIBLE,
     ROOM_CAPACITY_LIMITS,
@@ -104,6 +104,9 @@ class RoomService:
 
     async def get(self, db: AsyncSession, actor: User, room_id: int) -> RoomResponse:
         room = await self._get_or_404(db, room_id)
+        if is_student(actor):
+            if actor.facultate_id is None or room.department.facultate_id != actor.facultate_id:
+                raise RoomNotFoundError(room_id)
         is_owner = room.responsabil_id == actor.id_utilizator
         if not room.is_active and not is_structure_admin(actor) and not is_owner:
             raise InactiveEntityAccessDeniedError("sală")
@@ -120,29 +123,55 @@ class RoomService:
         tip_sala: Optional[TipSala],
         is_active: Optional[bool],
         min_capacitate: Optional[int],
+        max_capacitate: Optional[int],
+        etaj: Optional[int],
         search: Optional[str],
+        sort_by: Optional[str],
+        sort_order: Optional[str],
         skip: int,
         limit: int,
     ) -> Page[RoomResponse]:
         effective_active = resolve_active_filter(actor, is_active, "sală")
-        if institutie_id is not None and not await institution_repository.get_by_id(db, institutie_id):
-            raise InstitutionNotFoundError(institutie_id)
-        if facultate_id is not None and not await faculty_repository.get_by_id(db, facultate_id):
-            raise FacultyNotFoundError(facultate_id)
-        if departament_id is not None and not await department_repository.get_by_id(db, departament_id):
-            raise DepartmentNotFoundError(departament_id)
+        effective_facultate_id = facultate_id
+        effective_institutie_id = institutie_id
+
+        if is_student(actor):
+            if actor.facultate_id is None:
+                return Page.build([], 0, skip, limit)
+            if facultate_id is not None and facultate_id != actor.facultate_id:
+                return Page.build([], 0, skip, limit)
+            effective_facultate_id = actor.facultate_id
+            if actor.faculty:
+                if institutie_id is not None and institutie_id != actor.faculty.institutie_id:
+                    return Page.build([], 0, skip, limit)
+                effective_institutie_id = actor.faculty.institutie_id
+
+        if effective_institutie_id is not None and not await institution_repository.get_by_id(db, effective_institutie_id):
+            raise InstitutionNotFoundError(effective_institutie_id)
+        if effective_facultate_id is not None and not await faculty_repository.get_by_id(db, effective_facultate_id):
+            raise FacultyNotFoundError(effective_facultate_id)
+        if departament_id is not None:
+            dept = await department_repository.get_by_id(db, departament_id)
+            if not dept:
+                raise DepartmentNotFoundError(departament_id)
+            if is_student(actor) and dept.facultate_id != actor.facultate_id:
+                return Page.build([], 0, skip, limit)
         if responsabil_id is not None and not await auth_repository.get_by_id(db, responsabil_id):
             raise UserNotFoundError(responsabil_id)
         items, total = await room_repository.list_page(
             db,
             departament_id,
-            facultate_id,
-            institutie_id,
+            effective_facultate_id,
+            effective_institutie_id,
             responsabil_id,
             tip_sala,
             effective_active,
             min_capacitate,
+            max_capacitate,
+            etaj,
             search.strip() if search else None,
+            sort_by,
+            sort_order,
             skip,
             limit,
         )
@@ -150,7 +179,7 @@ class RoomService:
 
     async def list_mine(self, db: AsyncSession, actor: User, skip: int, limit: int) -> Page[RoomResponse]:
         items, total = await room_repository.list_page(
-            db, None, None, None, actor.id_utilizator, None, None, None, None, skip, limit
+            db, None, None, None, actor.id_utilizator, None, None, None, None, None, None, None, "asc", skip, limit
         )
         return Page.build([RoomResponse.from_model(item) for item in items], total, skip, limit)
 

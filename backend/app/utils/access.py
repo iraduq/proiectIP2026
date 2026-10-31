@@ -18,6 +18,10 @@ def is_structure_admin(user: User) -> bool:
     return user_has_permission(user, PermissionCode.STRUCTURE_MANAGE)
 
 
+def is_student(user: User) -> bool:
+    return user.role_rel.name == "STUDENT" if user.role_rel else False
+
+
 def resolve_active_filter(actor: User, requested: Optional[bool], entity_label: str) -> Optional[bool]:
     if is_structure_admin(actor):
         return requested

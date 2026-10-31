@@ -2,10 +2,10 @@ from typing import Any
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.seed import seed_academic_structure
-from app.db.models import Department, Faculty, Institution, Room
+from app.db.models import Department, Faculty, Institution, Room, User
 
 PASSWORD = "Password123!"
 
@@ -376,7 +376,9 @@ async def test_hierarchy_delete_and_deactivate_rules(chain: dict[str, Any], clie
 
 
 @pytest.mark.asyncio
-async def test_cascading_deactivation_and_cleanup(chain: dict[str, Any], client: AsyncClient, admin_headers):
+async def test_cascading_deactivation_and_cleanup(
+    chain: dict[str, Any], client: AsyncClient, admin_headers: dict[str, str], db_session: AsyncSession
+):
     room_off = await client.post(f"/api/rooms/{chain['room_id']}/deactivate", headers=admin_headers)
     assert room_off.status_code == 200
     assert room_off.json()["is_active"] is False
@@ -385,6 +387,14 @@ async def test_cascading_deactivation_and_cleanup(chain: dict[str, Any], client:
     assert again.json()["code"] == "room_already_inactive"
 
     student_headers = await login_headers(client, "student1@univ.ro")
+    foreign_room = await client.get(f"/api/rooms/{chain['room_id']}", headers=student_headers)
+    assert foreign_room.status_code == 404
+
+    await db_session.execute(
+        update(User).where(User.email == "student1@univ.ro").values(facultate_id=chain["faculty_id"])
+    )
+    await db_session.commit()
+
     hidden = await client.get(f"/api/rooms/{chain['room_id']}", headers=student_headers)
     assert hidden.status_code == 403
     assert hidden.json()["code"] == "inactive_entity_access_denied"
@@ -435,33 +445,44 @@ async def test_seed_populates_expected_structure(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_seeded_listing_filters_and_pagination(client: AsyncClient, db_session: AsyncSession):
     await seed_academic_structure(db_session)
-    headers = await login_headers(client, "student1@univ.ro")
+    admin_headers = await login_headers(client, "admin1@univ.ro")
+    student_headers = await login_headers(client, "student1@univ.ro")
 
-    page = await client.get("/api/rooms?limit=5&skip=0", headers=headers)
-    assert page.status_code == 200
-    body = page.json()
-    assert body["total"] == 324
+    admin_page = await client.get("/api/rooms?limit=5&skip=0", headers=admin_headers)
+    assert admin_page.status_code == 200
+    assert admin_page.json()["total"] == 324
+
+    student_page = await client.get("/api/rooms?limit=5&skip=0", headers=student_headers)
+    assert student_page.status_code == 200
+    body = student_page.json()
+    assert body["total"] == 36
     assert len(body["items"]) == 5
     assert body["has_more"] is True
 
-    servers = await client.get("/api/rooms?tip_sala=SALA_SERVERE&limit=100", headers=headers)
+    servers = await client.get("/api/rooms?tip_sala=SALA_SERVERE&limit=100", headers=admin_headers)
     assert servers.json()["total"] == 54
 
-    institutions = await client.get("/api/institutions?search=politehnica", headers=headers)
+    student_servers = await client.get("/api/rooms?tip_sala=SALA_SERVERE&limit=100", headers=student_headers)
+    assert student_servers.json()["total"] == 6
+
+    institutions = await client.get("/api/institutions?search=politehnica", headers=admin_headers)
     assert institutions.json()["total"] == 2
 
-    departments = await client.get("/api/departments?limit=100&skip=0", headers=headers)
+    departments = await client.get("/api/departments?limit=100&skip=0", headers=admin_headers)
     assert departments.json()["total"] == 54
+
+    student_departments = await client.get("/api/departments?limit=100&skip=0", headers=student_headers)
+    assert student_departments.json()["total"] == 6
 
     lab_headers = await login_headers(client, "lab1@univ.ro")
     mine = await client.get("/api/rooms/my?limit=100", headers=lab_headers)
     assert mine.json()["total"] == 15
     assert all(item["responsabil"]["email"] == "lab1@univ.ro" for item in mine.json()["items"])
 
-    invalid_limit = await client.get("/api/rooms?limit=1000", headers=headers)
+    invalid_limit = await client.get("/api/rooms?limit=1000", headers=student_headers)
     assert invalid_limit.status_code == 422
 
-    unknown_department = await client.get("/api/rooms?departament_id=999999", headers=headers)
+    unknown_department = await client.get("/api/rooms?departament_id=999999", headers=student_headers)
     assert unknown_department.status_code == 404
     assert unknown_department.json()["code"] == "department_not_found"
 
@@ -477,3 +498,39 @@ async def test_institution_stats(client: AsyncClient, db_session: AsyncSession):
     assert stats.json()["numar_facultati"] == 3
     assert stats.json()["numar_departamente"] == 18
     assert stats.json()["numar_sali"] == 108
+
+
+@pytest.mark.asyncio
+async def test_student_faculty_scoping(client: AsyncClient, db_session: AsyncSession):
+    await seed_academic_structure(db_session)
+    student_headers = await login_headers(client, "student1@univ.ro")
+    me = await client.get("/api/auth/me", headers=student_headers)
+    assert me.status_code == 200
+    my_fac_id = me.json()["facultate_id"]
+    assert my_fac_id is not None
+
+    faculties = await client.get("/api/faculties", headers=student_headers)
+    assert faculties.status_code == 200
+    assert faculties.json()["total"] == 1
+    assert faculties.json()["items"][0]["id"] == my_fac_id
+
+    foreign_fac_id = my_fac_id + 1
+    foreign_fac = await client.get(f"/api/faculties/{foreign_fac_id}", headers=student_headers)
+    assert foreign_fac.status_code == 404
+
+    rooms = await client.get("/api/rooms?limit=100", headers=student_headers)
+    assert rooms.status_code == 200
+    assert rooms.json()["total"] == 36
+
+    foreign_rooms = await client.get(f"/api/rooms?facultate_id={foreign_fac_id}", headers=student_headers)
+    assert foreign_rooms.status_code == 200
+    assert foreign_rooms.json()["total"] == 0
+    assert len(foreign_rooms.json()["items"]) == 0
+
+    admin_headers = await login_headers(client, "admin1@univ.ro")
+    all_rooms = await client.get(f"/api/rooms?facultate_id={foreign_fac_id}&limit=1", headers=admin_headers)
+    assert all_rooms.status_code == 200
+    if all_rooms.json()["items"]:
+        foreign_room_id = all_rooms.json()["items"][0]["id"]
+        blocked_room = await client.get(f"/api/rooms/{foreign_room_id}", headers=student_headers)
+        assert blocked_room.status_code == 404

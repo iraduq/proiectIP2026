@@ -1,7 +1,7 @@
 import asyncio
 from functools import lru_cache
 from typing import Optional
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     Department,
@@ -260,6 +260,8 @@ async def seed_roles_and_permissions(db: AsyncSession) -> None:
 async def seed_users(db: AsyncSession) -> None:
     role_ids = {name: role_id for name, role_id in (await db.execute(select(Role.name, Role.id))).all()}
     existing_emails = set((await db.execute(select(User.email))).scalars().all())
+    first_faculty = (await db.execute(select(Faculty).order_by(Faculty.id.asc()))).scalars().first()
+    faculty_id_for_student = first_faculty.id if first_faculty else None
 
     for first_name, last_name, email, role, numar_matricol, id_angajat in BASE_USERS:
         if email in existing_emails or role.value not in role_ids:
@@ -272,6 +274,7 @@ async def seed_users(db: AsyncSession) -> None:
                 role_id=role_ids[role.value],
                 numar_matricol=numar_matricol,
                 id_angajat=id_angajat,
+                facultate_id=faculty_id_for_student if role == UserRole.STUDENT else None,
                 is_active=True,
             )
         )
@@ -416,6 +419,13 @@ async def seed_academic_structure(db: AsyncSession) -> None:
                     )
                 await db.flush()
 
+        first_fac = (await db.execute(select(Faculty).order_by(Faculty.id.asc()))).scalars().first()
+        if first_fac and UserRole.STUDENT.value in role_ids:
+            await db.execute(
+                update(User)
+                .where(User.role_id == role_ids[UserRole.STUDENT.value], User.facultate_id.is_(None))
+                .values(facultate_id=first_fac.id)
+            )
         await db.commit()
 
 

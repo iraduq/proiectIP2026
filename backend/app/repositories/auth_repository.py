@@ -14,7 +14,10 @@ class AuthRepository:
     async def get_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
         result = await db.execute(
             select(User)
-            .options(joinedload(User.role_rel).selectinload(Role.permissions))
+            .options(
+                joinedload(User.role_rel).selectinload(Role.permissions),
+                joinedload(User.faculty),
+            )
             .where(User.email == email)
         )
         return result.scalars().first()
@@ -22,7 +25,10 @@ class AuthRepository:
     async def get_by_id(self, db: AsyncSession, user_id: int) -> Optional[User]:
         result = await db.execute(
             select(User)
-            .options(joinedload(User.role_rel).selectinload(Role.permissions))
+            .options(
+                joinedload(User.role_rel).selectinload(Role.permissions),
+                joinedload(User.faculty),
+            )
             .where(User.id_utilizator == user_id)
         )
         return result.scalars().first()
@@ -42,6 +48,7 @@ class AuthRepository:
             role_id=role.id,
             numar_matricol=user_data.numar_matricol,
             id_angajat=user_data.id_angajat,
+            facultate_id=user_data.facultate_id,
             is_active=True,
         )
         db.add(user)

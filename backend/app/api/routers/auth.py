@@ -7,6 +7,7 @@ from app.config import settings
 from app.db.database import get_db
 from app.db.models import User, UserRole
 from app.dependencies.auth import get_current_user
+from app.repositories.faculty_repository import faculty_repository
 from app.services.auth_services import auth_service
 from app.utils.roles import get_role_permissions
 
@@ -106,7 +107,26 @@ async def get_me(
         rol=resolved_role,
         numar_matricol=current_user.numar_matricol,
         id_angajat=current_user.id_angajat,
+        facultate_id=current_user.facultate_id,
+        facultate_nume=current_user.faculty.nume if current_user.faculty else None,
+        facultate_cod=current_user.faculty.cod if current_user.faculty else None,
         is_active=current_user.is_active,
         permissions=permissions,
         created_at=current_user.created_at,
     )
+
+
+@router.get("/faculties", response_model=list[dict])
+async def list_registration_faculties(
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    items, _ = await faculty_repository.list_page(db, None, None, True, 0, 100)
+    return [
+        {
+            "id": f.id,
+            "nume": f.nume,
+            "cod": f.cod,
+            "institutie_nume": f.institution.nume if f.institution else "",
+        }
+        for f in items
+    ]

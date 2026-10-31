@@ -16,7 +16,7 @@ from app.exceptions.academic_exceptions import (
 from app.exceptions.exceptions import FacultyNotFoundError, InstitutionNotFoundError
 from app.repositories.faculty_repository import faculty_repository
 from app.repositories.institution_repository import institution_repository
-from app.utils.access import is_structure_admin, resolve_active_filter
+from app.utils.access import is_structure_admin, is_student, resolve_active_filter
 
 
 class FacultyService:
@@ -59,6 +59,9 @@ class FacultyService:
 
     async def get(self, db: AsyncSession, actor: User, faculty_id: int) -> FacultyResponse:
         faculty = await self._get_or_404(db, faculty_id)
+        if is_student(actor):
+            if actor.facultate_id is None or faculty.id != actor.facultate_id:
+                raise FacultyNotFoundError(faculty_id)
         if not faculty.is_active and not is_structure_admin(actor):
             raise InactiveEntityAccessDeniedError("facultate")
         return FacultyResponse.from_model(faculty)
@@ -74,6 +77,18 @@ class FacultyService:
         limit: int,
     ) -> Page[FacultyResponse]:
         effective_active = resolve_active_filter(actor, is_active, "facultate")
+        if is_student(actor):
+            if actor.facultate_id is None:
+                return Page.build([], 0, skip, limit)
+            faculty = await faculty_repository.get_detailed(db, actor.facultate_id)
+            if not faculty:
+                return Page.build([], 0, skip, limit)
+            if institutie_id is not None and faculty.institutie_id != institutie_id:
+                return Page.build([], 0, skip, limit)
+            if search and search.lower() not in faculty.nume.lower() and search.lower() not in faculty.cod.lower():
+                return Page.build([], 0, skip, limit)
+            return Page.build([FacultyResponse.from_model(faculty)], 1, skip, limit)
+
         if institutie_id is not None and not await institution_repository.get_by_id(db, institutie_id):
             raise InstitutionNotFoundError(institutie_id)
         items, total = await faculty_repository.list_page(

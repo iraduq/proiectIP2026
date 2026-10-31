@@ -8,6 +8,7 @@ from pydantic import (
     Field,
     ValidationInfo,
     field_validator,
+    model_validator,
 )
 from app.db.models import UserRole
 from app.utils.validators import validate_romanian_name_rules
@@ -35,6 +36,7 @@ class UserCreate(BaseEmailSchema):
     rol: UserRole = UserRole.STUDENT
     numar_matricol: Optional[str] = Field(default=None, max_length=50)
     id_angajat: Optional[int] = Field(default=None)
+    facultate_id: Optional[int] = Field(default=None, gt=0)
 
     @field_validator("password")
     @classmethod
@@ -87,6 +89,15 @@ class UserCreate(BaseEmailSchema):
 
         return v
 
+    @model_validator(mode="after")
+    def validate_role_fields(self) -> "UserCreate":
+        if self.rol != UserRole.STUDENT:
+            self.numar_matricol = None
+            self.facultate_id = None
+        else:
+            self.id_angajat = None
+        return self
+
 
 class LoginSchema(BaseEmailSchema):
     password: str = Field(..., min_length=8, max_length=64)
@@ -99,11 +110,25 @@ class UserResponse(BaseModel):
     rol: UserRole
     numar_matricol: Optional[str] = None
     id_angajat: Optional[int] = None
+    facultate_id: Optional[int] = None
+    facultate_nume: Optional[str] = None
+    facultate_cod: Optional[str] = None
     is_active: bool = True
     permissions: list[str] = Field(default_factory=list)
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    @model_validator(mode="after")
+    def sanitize_role_fields(self) -> "UserResponse":
+        if self.rol != UserRole.STUDENT:
+            self.numar_matricol = None
+            self.facultate_id = None
+            self.facultate_nume = None
+            self.facultate_cod = None
+        else:
+            self.id_angajat = None
+        return self
 
 
 class UserFullResponse(UserResponse):
