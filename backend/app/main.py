@@ -4,13 +4,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.api.routers.auth import router as auth_router
+from app.api.routers.categories import router as categories_router
 from app.api.routers.departments import router as departments_router
 from app.api.routers.faculties import router as faculties_router
 from app.api.routers.health import router as health_router
 from app.api.routers.institutions import router as institutions_router
+from app.api.routers.reservations import router as reservations_router
+from app.api.routers.resources import router as resources_router
 from app.api.routers.rooms import router as rooms_router
+from app.api.routers.technical_history import router as technical_history_router
 from app.config import settings
-from app.db.database import AsyncSessionLocal, engine
+from app.db.database import AsyncSessionLocal, Base, engine
 from app.db.seed import seed_all
 from app.middleware.exception_handler import register_exception_handlers
 from app.middleware.security import security_middleware
@@ -18,6 +22,8 @@ from app.middleware.security import security_middleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     async with AsyncSessionLocal() as session:
         await seed_all(session)
     yield
@@ -88,6 +94,10 @@ app.include_router(institutions_router, prefix="/api")
 app.include_router(faculties_router, prefix="/api")
 app.include_router(departments_router, prefix="/api")
 app.include_router(rooms_router, prefix="/api")
+app.include_router(categories_router, prefix="/api")
+app.include_router(resources_router, prefix="/api")
+app.include_router(reservations_router, prefix="/api")
+app.include_router(technical_history_router, prefix="/api")
 
 
 @app.get("/", tags=["Root"])
