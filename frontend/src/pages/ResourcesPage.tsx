@@ -934,7 +934,7 @@ export function ResourcesPage() {
               <form onSubmit={handleSubmitResource} className="p-6 space-y-3.5">
                 {!isAdmin && (
                   <div className="p-3 rounded-xl bg-neutral-100 border border-neutral-200 text-xs text-neutral-700">
-                    În calitate de personal de laborator / profesor, puteți actualiza starea tehnică, specificațiile și descrierea. Modificarea codului de inventar și a sălii este rezervată administratorilor.
+                    În calitate de responsabil de laborator, puteți transfera echipamentul într-un alt laborator, actualiza starea tehnică, specificațiile și descrierea.
                   </div>
                 )}
 
@@ -1003,7 +1003,7 @@ export function ResourcesPage() {
                     <select
                       value={formData.sala_id}
                       onChange={(e) => setFormData({ ...formData, sala_id: Number(e.target.value) })}
-                      disabled={!isAdmin}
+                      disabled={!canManageResource}
                       className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                     >
                       {rooms.map((r) => (

@@ -178,10 +178,25 @@ class ResourceService:
             res.categorie_id = changes["categorie_id"]
 
         if "sala_id" in changes and changes["sala_id"]:
-            room = await room_repository.get_by_id(db, changes["sala_id"])
-            if not room:
+            new_room = await room_repository.get_by_id(db, changes["sala_id"])
+            if not new_room:
                 raise RoomNotFoundError(changes["sala_id"])
-            res.sala_id = changes["sala_id"]
+            if new_room.id != res.sala_id:
+                old_room = await room_repository.get_by_id(db, res.sala_id)
+                res.sala_id = new_room.id
+                from app.db.models import TechnicalHistory
+                from app.repositories.technical_history_repository import TechnicalHistoryRepository
+                tech_repo = TechnicalHistoryRepository()
+                old_code = old_room.cod if old_room else str(res.sala_id)
+                th = TechnicalHistory(
+                    resursa_id=res.id,
+                    utilizator_id=actor.id_utilizator,
+                    tip_interventie="TRANSFER_SALA",
+                    descriere=f"Echipament transferat din sala {old_code} in sala {new_room.cod} de catre {actor.nume}.",
+                    stare_anterioara=res.stare_tehnica,
+                    stare_noua=res.stare_tehnica,
+                )
+                await tech_repo.add(db, th)
 
         if "descriere" in changes:
             res.descriere = changes["descriere"].strip() if changes["descriere"] else None

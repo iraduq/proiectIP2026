@@ -86,19 +86,19 @@ class ReservationRepository(BaseRepository[Reservation]):
         utilizator_id: Optional[int] = None,
         resursa_id: Optional[int] = None,
         facultate_id: Optional[int] = None,
+        responsabil_id: Optional[int] = None,
         stare: Optional[StareRezervare] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[Reservation], int]:
         stmt = select(Reservation).options(*self.detail_options)
 
-        if facultate_id is not None:
-            stmt = (
-                stmt.join(Resource, Reservation.resursa_id == Resource.id)
-                .join(Room, Resource.sala_id == Room.id)
-                .join(Department, Room.departament_id == Department.id)
-                .where(Department.facultate_id == facultate_id)
-            )
+        if facultate_id is not None or responsabil_id is not None:
+            stmt = stmt.join(Resource, Reservation.resursa_id == Resource.id).join(Room, Resource.sala_id == Room.id)
+            if facultate_id is not None:
+                stmt = stmt.join(Department, Room.departament_id == Department.id).where(Department.facultate_id == facultate_id)
+            if responsabil_id is not None:
+                stmt = stmt.where(Room.responsabil_id == responsabil_id)
 
         if utilizator_id is not None:
             stmt = stmt.where(Reservation.utilizator_id == utilizator_id)

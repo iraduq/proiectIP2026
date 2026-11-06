@@ -178,12 +178,18 @@ class ReservationService:
     ) -> PaginatedResponse[ReservationResponse]:
         effective_user_id = utilizator_id
         effective_facultate_id = None
+        effective_responsabil_id = None
 
         if is_student(actor):
-            # Students can ONLY see their own reservations
+            effective_user_id = actor.id_utilizator
+        elif actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value:
+            if utilizator_id is not None:
+                effective_user_id = actor.id_utilizator
+            else:
+                effective_responsabil_id = actor.id_utilizator
+        elif actor.role_rel.name == UserRole.PROFESOR.value:
             effective_user_id = actor.id_utilizator
         elif not is_structure_admin(actor):
-            # Teachers and Lab Managers see reservations for their faculty
             effective_facultate_id = actor.facultate_id
 
         items, total = await reservation_repository.list_page(
@@ -191,6 +197,7 @@ class ReservationService:
             utilizator_id=effective_user_id,
             resursa_id=resursa_id,
             facultate_id=effective_facultate_id,
+            responsabil_id=effective_responsabil_id,
             stare=stare,
             skip=skip,
             limit=limit,
@@ -220,34 +227,60 @@ class ReservationService:
             UserRole.RESPONSABIL_LABORATOR.value,
         ]
 
-        # Cancellation rules:
         if new_state == StareRezervare.ANULATA:
             if not is_owner and not is_structure_admin(actor):
                 raise UnauthorizedAccessError("Doar titularul rezervării sau un administrator o poate anula.")
             if current_state not in [StareRezervare.IN_ASTEPTARE, StareRezervare.APROBATA]:
                 raise ReservationStateTransitionError(current_state.value, new_state.value)
 
-        # Approval rules:
         elif new_state == StareRezervare.APROBATA:
-            if not is_staff:
-                raise UnauthorizedAccessError("Doar personalul didactic sau administratorul poate aproba rezervări.")
+            if is_structure_admin(actor):
+                pass
+            elif actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value:
+                room_resp_id = (
+                    reservation.resource.room.responsabil_id
+                    if reservation.resource and reservation.resource.room
+                    else None
+                )
+                if room_resp_id != actor.id_utilizator:
+                    raise UnauthorizedAccessError("Doar responsabilul de laborator al acestei săli poate aproba rezervarea.")
+            else:
+                raise UnauthorizedAccessError("Doar responsabilul de laborator al sălii sau un administrator poate aproba rezervări.")
             if current_state != StareRezervare.IN_ASTEPTARE:
                 raise ReservationStateTransitionError(current_state.value, new_state.value)
 
-        # Rejection rules:
         elif new_state == StareRezervare.RESPINSA:
-            if not is_staff:
-                raise UnauthorizedAccessError("Doar personalul didactic sau administratorul poate respinge rezervări.")
+            if is_structure_admin(actor):
+                pass
+            elif actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value:
+                room_resp_id = (
+                    reservation.resource.room.responsabil_id
+                    if reservation.resource and reservation.resource.room
+                    else None
+                )
+                if room_resp_id != actor.id_utilizator:
+                    raise UnauthorizedAccessError("Doar responsabilul de laborator al acestei săli poate respinge rezervarea.")
+            else:
+                raise UnauthorizedAccessError("Doar responsabilul de laborator al sălii sau un administrator poate respinge rezervări.")
             if current_state != StareRezervare.IN_ASTEPTARE:
                 raise ReservationStateTransitionError(current_state.value, new_state.value)
             reservation.motiv_respingere = (
-                data.motiv_respingere.strip() if data.motiv_respingere else "Respinsă de către responsabil."
+                data.motiv_respingere.strip() if data.motiv_respingere else "Respinsă de către responsabilul sălii."
             )
 
-        # Finalized / Return rules:
         elif new_state == StareRezervare.FINALIZATA:
-            if not is_staff:
-                raise UnauthorizedAccessError("Doar personalul didactic sau administratorul poate finaliza rezervări.")
+            if is_structure_admin(actor):
+                pass
+            elif actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value:
+                room_resp_id = (
+                    reservation.resource.room.responsabil_id
+                    if reservation.resource and reservation.resource.room
+                    else None
+                )
+                if room_resp_id != actor.id_utilizator:
+                    raise UnauthorizedAccessError("Doar responsabilul de laborator al acestei săli poate finaliza rezervarea.")
+            else:
+                raise UnauthorizedAccessError("Doar responsabilul de laborator al sălii sau un administrator poate finaliza rezervări.")
             if current_state != StareRezervare.APROBATA:
                 raise ReservationStateTransitionError(current_state.value, new_state.value)
 
@@ -271,13 +304,15 @@ class ReservationService:
         reservation = await self.get_by_id(db, reservation_id)
         current_state = reservation.stare
 
-        is_staff = actor.role_rel.name in [
-            UserRole.ADMINISTRATOR.value,
-            UserRole.PROFESOR.value,
-            UserRole.RESPONSABIL_LABORATOR.value,
-        ]
-        if not is_staff:
-            raise UnauthorizedAccessError("Doar personalul didactic sau administratorul poate finaliza rezervări.")
+        is_admin = is_structure_admin(actor)
+        is_room_resp = (
+            actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value
+            and reservation.resource
+            and reservation.resource.room
+            and reservation.resource.room.responsabil_id == actor.id_utilizator
+        )
+        if not is_admin and not is_room_resp:
+            raise UnauthorizedAccessError("Doar responsabilul de laborator al acestei săli sau un administrator poate efectua recepția returului.")
         if current_state != StareRezervare.APROBATA:
             raise ReservationStateTransitionError(current_state.value, StareRezervare.FINALIZATA.value)
 

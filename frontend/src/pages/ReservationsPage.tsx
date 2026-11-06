@@ -43,7 +43,6 @@ export function ReservationsPage() {
   const isStudent = user?.rol === "STUDENT"
   const canApprove =
     user?.rol === "ADMINISTRATOR" ||
-    user?.rol === "PROFESOR" ||
     user?.rol === "RESPONSABIL_LABORATOR" ||
     Boolean(user?.permissions?.includes("bookings:approve"))
   const canReturn =
