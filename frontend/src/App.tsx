@@ -5,6 +5,9 @@ import { RegisterPage } from "./pages/RegisterPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { AcademicAdminPage } from "./pages/AcademicAdminPage"
 import { RoomsPage } from "./pages/RoomsPage"
+import { ResourcesPage } from "./pages/ResourcesPage"
+import { ReservationsPage } from "./pages/ReservationsPage"
+import { TechnicalHistoryPage } from "./pages/TechnicalHistoryPage"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -47,6 +50,30 @@ export function App() {
             element={
               <ProtectedRoute>
                 <RoomsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/resources"
+            element={
+              <ProtectedRoute>
+                <ResourcesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reservations"
+            element={
+              <ProtectedRoute>
+                <ReservationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/technical-history"
+            element={
+              <ProtectedRoute>
+                <TechnicalHistoryPage />
               </ProtectedRoute>
             }
           />

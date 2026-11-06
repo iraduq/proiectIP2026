@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import { academicApi } from "../../api/academic"
-import type { Department, Faculty, Room } from "../../types"
+import { resourcesApi } from "../../api/resources"
+import type { Department, Faculty, Resource, Room } from "../../types"
 import {
   LayoutDashboard,
   Building2,
@@ -14,6 +15,9 @@ import {
   GraduationCap,
   X,
   Loader2,
+  Cpu,
+  Calendar,
+  Wrench,
 } from "lucide-react"
 import { Input } from "../ui/input"
 
@@ -33,7 +37,8 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
     rooms: Room[]
     departments: Department[]
     faculties: Faculty[]
-  }>({ rooms: [], departments: [], faculties: [] })
+    resources: Resource[]
+  }>({ rooms: [], departments: [], faculties: [], resources: [] })
   const [showResults, setShowResults] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
@@ -50,7 +55,7 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
   useEffect(() => {
     const trimmed = searchQuery.trim()
     if (trimmed.length < 2) {
-      setSearchResults({ rooms: [], departments: [], faculties: [] })
+      setSearchResults({ rooms: [], departments: [], faculties: [], resources: [] })
       setIsSearching(false)
       return
     }
@@ -58,15 +63,17 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
     const timer = setTimeout(async () => {
       setIsSearching(true)
       try {
-        const [roomsRes, deptsRes, facsRes] = await Promise.all([
+        const [roomsRes, deptsRes, facsRes, resourcesRes] = await Promise.all([
           academicApi.getRooms({ search: trimmed, limit: 5 }),
           academicApi.getDepartments({ search: trimmed, limit: 5 }),
           academicApi.getFaculties({ search: trimmed, limit: 5 }),
+          resourcesApi.getResources({ search: trimmed, limit: 5 }),
         ])
         setSearchResults({
           rooms: roomsRes.items,
           departments: deptsRes.items,
           faculties: facsRes.items,
+          resources: resourcesRes.items,
         })
         setShowResults(true)
       } catch {
@@ -83,14 +90,22 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
     navigate("/login")
   }
 
+  const isAdmin = user?.rol === "ADMINISTRATOR" || user?.permissions?.includes("structure:manage")
+
   const navItems = [
     { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
-    { label: "Structură Academică", path: "/admin/academic", icon: Building2 },
+    { label: "Resurse & Echipamente", path: "/resources", icon: Cpu },
+    { label: "Rezervări", path: "/reservations", icon: Calendar },
+    { label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench },
     { label: "Săli de cercetare", path: "/rooms", icon: DoorOpen },
+    ...(isAdmin ? [{ label: "Structură Academică", path: "/admin/academic", icon: Building2 }] : []),
   ]
 
   const totalResults =
-    searchResults.rooms.length + searchResults.departments.length + searchResults.faculties.length
+    searchResults.rooms.length +
+    searchResults.departments.length +
+    searchResults.faculties.length +
+    searchResults.resources.length
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
@@ -140,6 +155,35 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
                   </div>
                 ) : (
                   <>
+                    {searchResults.resources.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-1 flex items-center gap-1">
+                          <Cpu className="h-3 w-3" />
+                          <span>Echipamente & Resurse</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {searchResults.resources.map((res) => (
+                            <button
+                              key={res.id}
+                              onClick={() => {
+                                setShowResults(false)
+                                navigate(`/resources?search=${encodeURIComponent(res.cod_inventar)}`)
+                              }}
+                              className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-neutral-100 flex items-center justify-between text-xs transition-colors"
+                            >
+                              <div className="truncate">
+                                <span className="font-mono font-bold text-neutral-900 mr-2">{res.cod_inventar}</span>
+                                <span className="text-neutral-600">{res.nume}</span>
+                              </div>
+                              <span className="text-[10px] text-neutral-400 shrink-0 font-medium">
+                                {res.stare_tehnica}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {searchResults.rooms.length > 0 && (
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-1 flex items-center gap-1">
