@@ -51,7 +51,7 @@ def upgrade() -> None:
         sa.Column('sala_id', sa.Integer(), sa.ForeignKey('sali.id', ondelete='RESTRICT'), nullable=False),
         sa.Column(
             'stare_tehnica',
-            sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum'),
+            sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum', create_type=False),
             nullable=False,
             server_default='DISPONIBILA',
         ),
@@ -75,7 +75,7 @@ def upgrade() -> None:
         sa.Column('data_sfarsit', sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             'stare',
-            sa.Enum('IN_ASTEPTARE', 'APROBATA', 'ANULATA', 'RESPINSA', 'FINALIZATA', name='stare_rezervare_enum'),
+            sa.Enum('IN_ASTEPTARE', 'APROBATA', 'ANULATA', 'RESPINSA', 'FINALIZATA', name='stare_rezervare_enum', create_type=False),
             nullable=False,
             server_default='IN_ASTEPTARE',
         ),
@@ -98,8 +98,8 @@ def upgrade() -> None:
         sa.Column('utilizator_id', sa.Integer(), sa.ForeignKey('utilizatori.id_utilizator', ondelete='RESTRICT'), nullable=False),
         sa.Column('tip_interventie', sa.String(length=100), nullable=False),
         sa.Column('descriere', sa.String(length=1000), nullable=False),
-        sa.Column('stare_anterioara', sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum'), nullable=False),
-        sa.Column('stare_noua', sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum'), nullable=False),
+        sa.Column('stare_anterioara', sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum', create_type=False), nullable=False),
+        sa.Column('stare_noua', sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum', create_type=False), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
     )
