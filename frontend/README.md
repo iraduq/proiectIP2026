@@ -58,16 +58,41 @@ Frontend-ul oferă o experiență unificată, complet integrată cu backend-ul F
   - Comutator activare / dezactivare stare sală.
   - Ștergere sală cu dialog de confirmare.
 
-### 4. Gestiune Structură Academică (`/admin/academic`)
+### 4. Catalog Resurse & Echipamente (`/resources`)
+- Evidență completă a echipamentelor universitare (stații de calcul HPC, roboți, aparatură de măsură, imprimante 3D, kituri IoT).
+- Badge-uri vizuale clare pentru stare tehnică: *Disponibilă* (verde), *În mentenanță* (galben), *Defectă* (roșu).
+- **Filtrare avansată:** căutare liberă, filtrare pe categorii, săli și stare tehnică, resetare instantă a filtrelor.
+- **Rezervare directă:** Formular modal cu selectare interval temporal (început - sfârșit), scop didactic/cercetare și validare automată a regulilor (plafon 4 resurse, categorie duplicată, suprapuneri orare).
+- **Jurnal tehnic integrat:** Vizualizare istoric intervenții per resursă și înregistrare defecțiuni/mentenanță.
+- **Gestiune Categorii:** Modal dedicat pentru crearea și administrarea categoriilor de echipamente.
+- **CRUD Echipamente:** Adăugare, editare parametri tehnici și dezactivare echipamente pentru administratori.
+
+### 5. Gestiune Rezervări (`/reservations`)
+- **Pentru Studenți:**
+  - Card vizual de cotă cu bară de progres (`X / 4 resurse active`) și reguli de împrumut.
+  - Tabel cu rezervările proprii, stări (*În așteptare*, *Aprobată*, *Finalizată*, *Respinsă*, *Anulată*), motiv respingere și buton de anulare.
+- **Pentru Profesori, Responsabili și Administratori:**
+  - Panou centralizat cu comutare între „Rezervările mele” și „Aprobare & Gestiune Cereri”.
+  - Indicator numeric pentru cereri în așteptare.
+  - Buton „Aprobă” cu tranziție instantă în starea *Aprobată*.
+  - Buton „Respinge” cu formular modal pentru motivul respingerii.
+  - Buton „Confirmă Retur” la predarea fizică a echipamentului (marcare *Finalizată*).
+
+### 6. Jurnal Tehnic & Mentenanță (`/technical-history`)
+- Registru imutabil pentru auditul stării tehnice a aparaturii universitare.
+- Înregistrare intervenții: Mentenanță preventivă, Defecțiune semnalată, Reparație, Calibrare, Instalare software.
+- Modificarea automată a stării echipamentului în catalog la înregistrarea unei intervenții.
+- Filtrare după tip de intervenție și căutare liberă.
+
+### 7. Gestiune Structură Academică (`/admin/academic`)
 - Vizualizare și administrare pentru trei niveluri ierarhice (Instituții, Facultăți, Departamente).
 - Filtre de căutare și filtrare combinată pe fiecare filă.
 - Formulare modale pentru adăugare și editare cu validare integrată.
 - Operațiuni de activare, dezactivare și ștergere.
 
-### 5. Căutare Globală Live în bara laterală
-- Câmpul „Caută în RRM...” din sidebar execută căutare live (debounced la 250ms) simultan în săli, departamente și facultăți.
-- Dropdown flotant cu categorii clare.
-- Navigare instantă către sala selectată sau structura academică.
+### 8. Căutare Globală Live în bara laterală
+- Câmpul „Caută în RRM...” din sidebar execută căutare live (debounced la 250ms) simultan în resurse/echipamente, săli, departamente și facultăți.
+- Dropdown flotant cu categorii clare și navigare instantă către resursa sau entitatea selectată.
 
 ---
 
@@ -134,25 +159,28 @@ frontend/
 │   ├── api/               # Apeluri HTTP axios către backend
 │   │   ├── client.ts      # Instanță Axios cu baseURL: "/api" și withCredentials: true
 │   │   ├── auth.ts        # Apeluri login, register, me, logout, facultăți
-│   │   └── academic.ts    # CRUD săli, departamente, facultăți, instituții
+│   │   ├── academic.ts    # CRUD săli, departamente, facultăți, instituții
+│   │   ├── categories.ts  # CRUD categorii de echipamente
+│   │   ├── resources.ts   # CRUD și filtrare resurse/echipamente de cercetare
+│   │   ├── reservations.ts# Creare, aprobare, respingere, retur și cote rezervări
+│   │   └── technicalHistory.ts # Consultare și înregistrare intervenții tehnice
 │   ├── components/
 │   │   ├── layout/
-│   │   │   └── AppLayout.tsx   # Layout principal: sidebar, căutare globală, breadcrumbs, user info
-│   │   └── ui/            # Componente reutilizabile UI
-│   │       ├── badge.tsx  # Badge-uri de stare (success, outline, secondary)
-│   │       ├── button.tsx # Butoane tematizate
-│   │       ├── card.tsx   # Card-uri de conținut
-│   │       └── input.tsx  # Câmpuri de introducere text
+│   │   │   └── AppLayout.tsx   # Layout principal: sidebar, căutare globală live, breadcrumbs
+│   │   └── ui/            # Componente reutilizabile UI (badge, button, card, input)
 │   ├── context/
 │   │   └── AuthContext.tsx # Context global React pentru autentificare și sesiune
 │   ├── lib/
 │   │   └── utils.ts       # Utilitare CSS (clsx, tailwind-merge)
 │   ├── pages/
-│   │   ├── LoginPage.tsx         # Ecran autentificare
-│   │   ├── RegisterPage.tsx      # Ecran creare cont cu selecție facultate
-│   │   ├── DashboardPage.tsx     # Panou de bord adaptiv pe roluri
-│   │   ├── RoomsPage.tsx         # Catalog săli cu filtrare avansată și CRUD
-│   │   └── AcademicAdminPage.tsx # Administrare instituții, facultăți, departamente
+│   │   ├── LoginPage.tsx            # Ecran autentificare
+│   │   ├── RegisterPage.tsx         # Ecran creare cont cu selecție facultate
+│   │   ├── DashboardPage.tsx        # Panou de bord adaptiv pe roluri cu statistici live
+│   │   ├── RoomsPage.tsx            # Catalog săli cu filtrare avansată și CRUD
+│   │   ├── ResourcesPage.tsx        # Catalog echipamente, rezervare și gestiune categorii
+│   │   ├── ReservationsPage.tsx     # Gestiune rezervări, flux aprobare/retur și cotă student
+│   │   ├── TechnicalHistoryPage.tsx # Jurnal tehnic imutabil și raportare defecțiuni
+│   │   └── AcademicAdminPage.tsx    # Administrare instituții, facultăți, departamente
 │   ├── types/
 │   │   └── index.ts       # Tipuri TypeScript sincronizate cu schemele Pydantic
 │   ├── App.tsx            # Rute React Router DOM și protecție pagini
@@ -169,6 +197,6 @@ frontend/
 
 ## Integrarea cu Backend-ul
 
-- **Proxy automat:** Cererile `api.get('/rooms')` sunt transformate automat de Vite în `http://localhost:8000/api/rooms`.
+- **Proxy automat:** Toate cererile către `/api/*` sunt transformate automat de Vite în `http://localhost:8000/api/*`.
 - **Securitate sesiune:** Cookie-ul securizat `access_token` (HttpOnly) este trimis automat de browser la fiecare cerere (`withCredentials: true`), prevenind atacurile de tip XSS.
-- **Rute protejate:** Accesul la paginile `/dashboard`, `/rooms` și `/admin/academic` este verificat automat prin contextul `AuthContext`. Utilizatorii neautentificați sunt redirecționați către `/login`.
+- **Rute protejate:** Accesul la paginile `/dashboard`, `/rooms`, `/resources`, `/reservations`, `/technical-history` și `/admin/academic` este verificat automat prin contextul `AuthContext`. Utilizatorii neautentificați sunt redirecționați către `/login`.

@@ -132,7 +132,28 @@ Modulul de frontend oferă o interfață complet funcțională, sincronizată î
   - *Pentru Administratori:* Excluderea indicatorilor de cotă studențească, afișare badge *Administrator*, identificator angajat și notă dedicată privind responsabilitățile administrative.
 - Tabel cu primele săli disponibile și legături directe către cataloage.
 
-#### 4. Catalog Săli de Cercetare & Laboratoare (`/rooms`)
+#### 4. Catalog Resurse & Echipamente (`/resources`)
+- Catalog complet de echipamente (stații GPU deep learning, clustere HPC, brațe robotice, platforme autonome, aparatură de măsură, imprimante 3D, kituri FPGA).
+- Indicatori vizuali de stare tehnică: *Disponibilă*, *În mentenanță*, *Defectă*.
+- **Filtrare Avansată:** Căutare liberă, filtrare pe categorii, pe săli de cercetare și stare tehnică.
+- **Rezervare Rapidă:** Dialog modal cu selector dată/oră început și sfârșit, specificare scop cercetare și verificare instantă a suprapunerilor sau limitelor de cotă.
+- **Jurnal Tehnic Dedicat:** Acces facil la istoricul tehnic per resursă și înregistrare de intervenții direct din catalog.
+- **Gestiune Categorii & Echipamente:** Modale de administrare pentru adăugare/editare resurse și creare categorii noi.
+
+#### 5. Gestiune Rezervări & Cote Studențești (`/reservations`)
+- **Adaptat pentru Studenți:** Card de cotă dinamic (`X / 4 resurse active`) cu bară vizuală de progres, evidența rezervărilor proprii și opțiune de anulare pentru cererile în așteptare.
+- **Flux Didactic pentru Profesori și Responsabili:**
+  - Separare clară între rezervările personale și cererile venite de la studenți.
+  - Aprobare cu un singur click a cererilor eligibile.
+  - Respingere motivată prin formular modal de justificare.
+  - Înregistrare predare și retur fizic al echipamentului (marcare automată *Finalizată*).
+
+#### 6. Jurnal Tehnic & Fișe Mentenanță (`/technical-history`)
+- Registru imutabil pentru auditul intervențiilor tehnice, defecțiunilor și reparațiilor.
+- Tipuri de evenimente: Mentenanță preventivă, Defecțiune semnalată, Reparație, Calibrare, Actualizare software/firmware.
+- La salvarea unei intervenții cu nouă stare tehnică, starea resursei este actualizată automat și în catalog.
+
+#### 7. Catalog Săli de Cercetare & Laboratoare (`/rooms`)
 - Tabel detaliat: cod sală, denumire, tip (`LABORATOR_DIDACTIC`, `LABORATOR_CERCETARE`, `SALA_SERVERE`, `SALA_CONFERINTE`), departament, etaj, capacitate, responsabil sală și stare (Activă / Inactivă).
 - **Filtrare Avansată:**
   - Căutare liberă după cod sau nume sală.
@@ -148,7 +169,7 @@ Modulul de frontend oferă o interfață complet funcțională, sincronizată î
   - Comutator pentru activare / dezactivare stare sală.
   - Ștergere sală cu dialog de confirmare.
 
-#### 5. Administrare Structură Academică (`/admin/academic`)
+#### 8. Administrare Structură Academică (`/admin/academic`)
 - Pagină dedicată exclusiv administratorilor, organizată pe 3 file:
   - **Instituții:** Denumire, cod, oraș, adresă, comutare stare, editare, adăugare și ștergere.
   - **Facultăți:** Denumire, cod, instituție de apartenență, contact, acțiuni CRUD.
@@ -158,22 +179,22 @@ Modulul de frontend oferă o interfață complet funcțională, sincronizată î
 ### Căutare Globală Live
 
 Bara laterală conține un câmp integrat de căutare live („Caută în RRM...”) cu debouncing de 250ms:
-- Interoghează simultan cataloagele de săli, departamente și facultăți.
+- Interoghează simultan cataloagele de echipamente/resurse, săli, departamente și facultăți.
 - Deschide o fereastră flotantă cu rezultate structurate pe categorii.
-- Navighează instant către sala selectată sau secțiunea corespunzătoare din structura academică.
+- Navighează instant către echipamentul, sala sau secțiunea corespunzătoare din structura academică.
 
 ### Izolare pe Facultăți (Student Scoping)
 
-- Studenții au acces restricționat exclusiv la spațiile și departamentele din cadrul propriei facultăți.
-- În interfața `/rooms`, filtrele de instituție și facultate sunt blocate automat pe datele studentului.
-- Încercarea de accesare directă a unei săli din altă facultate returnează `404 Not Found`.
+- Studenții au acces restricționat exclusiv la spațiile, departamentele și echipamentele din cadrul propriei facultăți.
+- În interfețele `/rooms` și `/resources`, datele sunt filtrate automat pe baza facultății studentului.
+- Încercarea de accesare directă a unei săli sau resurse din altă facultate returnează `404 Not Found`.
 
 ### Integrare API & Securitate Sesiune
 
 - **Proxy Vite:** Toate cererile către `/api/*` sunt redirecționate către serverul FastAPI de la `http://localhost:8000`.
 - **Cookie-uri HttpOnly:** Cookie-ul `access_token` este gestionat automat de browser, prevenind expunerea token-ului în JavaScript și asigurând protecție împotriva atacurilor XSS.
 - **Header Bearer Fallback:** În paralel, token-ul este trimis și ca antet `Authorization: Bearer <token>` pentru compatibilitate cu ambele mecanisme.
-- **Rute Protejate:** Accesul la `/dashboard`, `/rooms` și `/admin/academic` este restricționat la utilizatorii autentificați; utilizatorii neautorizați sunt redirecționați la `/login`.
+- **Rute Protejate:** Accesul la `/dashboard`, `/rooms`, `/resources`, `/reservations`, `/technical-history` și `/admin/academic` este restricționat la utilizatorii autentificați; utilizatorii neautorizați sunt redirecționați la `/login`.
 
 ## Database RBAC Architecture
 
@@ -480,6 +501,56 @@ Citirea necesită permisiunea `structure:read` (toate rolurile), scrierea `struc
 | `GET` / `PATCH` / `DELETE` | `/api/rooms/{id}` | Detalii / modificare (administrator sau responsabil) / ștergere sală |
 | `PUT` | `/api/rooms/{id}/responsible` | Reasignare responsabil sală |
 | `POST` | `/api/rooms/{id}/activate`, `/deactivate` | Activare / dezactivare |
+
+### Categorii de Resurse (`/api/categories`)
+
+Permisiune de citire pentru toți utilizatorii autentificați; scriere rezervată administratorilor (`structure:manage`).
+
+| Metodă | Endpoint | Descriere |
+|---|---|---|
+| `GET` | `/api/categories` | Listare paginată categorii resurse cu număr de echipamente asociate (`search`, `is_active`) |
+| `GET` | `/api/categories/{id}` | Detalii categorie |
+| `POST` | `/api/categories` | Creare categorie nouă |
+| `PATCH` | `/api/categories/{id}` | Modificare denumire sau descriere categorie |
+| `DELETE` | `/api/categories/{id}` | Ștergere / dezactivare categorie |
+
+### Resurse & Echipamente (`/api/resources`)
+
+Citirea necesită `resources:read` (cu filtrare automată pe facultate pentru studenți), crearea `resources:create`, modificarea `resources:update`, iar ștergerea `resources:delete`.
+
+| Metodă | Endpoint | Descriere |
+|---|---|---|
+| `GET` | `/api/resources` | Listare paginată resurse (`categorie_id`, `sala_id`, `departament_id`, `facultate_id`, `stare_tehnica`, `is_active`, `search`, `skip`, `limit`) |
+| `GET` | `/api/resources/{id}` | Detalii complete resursă (ierarhie sală, departament, facultate, specificații) |
+| `POST` | `/api/resources` | Adăugare resursă nouă în inventar cu cod unic de inventar |
+| `PATCH` | `/api/resources/{id}` | Modificare date echipament (denumire, sală, specificații, stare tehnică) |
+| `DELETE` | `/api/resources/{id}` | Dezactivare resursă din catalog |
+
+### Rezervări Echipamente (`/api/reservations`)
+
+Gestiunea rezervărilor cu validare automată a regulilor academice: maximum 4 resurse simultan per student, fără categorii duplicate, fără suprapuneri temporale pe echipament și blocare echipamente defecte/mentenanță.
+
+| Metodă | Endpoint | Descriere |
+|---|---|---|
+| `GET` | `/api/reservations/quota` | Verificare cotă personală de rezervare student (`active_count / 4`, rezervări curente) |
+| `GET` | `/api/reservations` | Listare rezervări (studenții își văd doar cererile proprii, cadrele didactice cererile din facultate) |
+| `GET` | `/api/reservations/{id}` | Detalii rezervare |
+| `POST` | `/api/reservations` | Creare cerere rezervare echipament (`resursa_id`, `data_inceput`, `data_sfarsit`, `scop`) |
+| `PATCH` | `/api/reservations/{id}/status` | Modificare stare rezervare conform matricei permisiunilor |
+| `POST` | `/api/reservations/{id}/cancel` | Anulare rezervare proprie de către solicitant |
+| `POST` | `/api/reservations/{id}/approve` | Aprobare rezervare de către profesor / responsabil laborator |
+| `POST` | `/api/reservations/{id}/reject` | Respingere motivată rezervare |
+| `POST` | `/api/reservations/{id}/return` | Înregistrare predare și retur fizic echipament (finalizare) |
+
+### Jurnal Tehnic & Mentenanță (`/api/technical-history`)
+
+Registru imutabil pentru evidența intervențiilor tehnice și a istoricului reparațiilor (`technical_history:read` / `create`).
+
+| Metodă | Endpoint | Descriere |
+|---|---|---|
+| `GET` | `/api/technical-history` | Consultare jurnal tehnic (`resursa_id`, `utilizator_id`, `skip`, `limit`) |
+| `GET` | `/api/technical-history/{id}` | Detalii înregistrare fișă tehnică |
+| `POST` | `/api/technical-history` | Înregistrare intervenție/defecțiune și actualizare automată a stării echipamentului |
 
 ## Maintainers
 
