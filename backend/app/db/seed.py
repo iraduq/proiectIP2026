@@ -1,15 +1,22 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Optional
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
+    Category,
     Department,
     Faculty,
     Institution,
     Permission,
+    Reservation,
+    Resource,
     Role,
     Room,
+    StareRezervare,
+    StareTehnica,
+    TechnicalHistory,
     TipSala,
     User,
     UserRole,
@@ -429,6 +436,246 @@ async def seed_academic_structure(db: AsyncSession) -> None:
         await db.commit()
 
 
+async def seed_resources_and_reservations(db: AsyncSession) -> None:
+    # 1. Categories
+    categories_data = [
+        ("Calculatoare & Servere HPC", "Sisteme de calcul de mare performanță, clustere GPU, stații grafice de lucru."),
+        ("Robotică & Sisteme Autonome", "Brațe robotice industriale, roboți mobili, drone autonome și senzori LiDAR."),
+        ("Aparatură Măsură & Osciloscoape", "Osciloscoape digitale, analizoare de spectru, multimetre și generatoare de semnal."),
+        ("Kituri IoT & Sisteme Embedded", "Plăci dezvoltare FPGA, microcontrolere avansate și module comunicații IoT."),
+        ("Imprimare 3D & Prototipare Rapidă", "Imprimante 3D FDM/SLA industriale, gravatoare laser și stații lipire SMD."),
+    ]
+
+    cat_map: dict[str, Category] = {}
+    for cat_name, cat_desc in categories_data:
+        existing = (await db.execute(select(Category).where(Category.nume == cat_name))).scalars().first()
+        if not existing:
+            cat = Category(nume=cat_name, descriere=cat_desc, is_active=True)
+            db.add(cat)
+            await db.flush()
+            cat_map[cat_name] = cat
+        else:
+            cat_map[cat_name] = existing
+
+    # Find some rooms
+    rooms = (await db.execute(select(Room).order_by(Room.id.asc()).limit(10))).scalars().all()
+    if not rooms:
+        await db.commit()
+        return
+
+    # Find users
+    student1 = (await db.execute(select(User).where(User.email == "student1@univ.ro"))).scalars().first()
+    student2 = (await db.execute(select(User).where(User.email == "student2@univ.ro"))).scalars().first()
+    prof1 = (await db.execute(select(User).where(User.email == "prof1@univ.ro"))).scalars().first()
+    lab1 = (await db.execute(select(User).where(User.email == "lab1@univ.ro"))).scalars().first()
+
+    # 2. Resources
+    resources_data = [
+        {
+            "nume": "Stație Grafică Deep Learning RTX 4090",
+            "cod": "HPC-RTX-4090-01",
+            "cat": "Calculatoare & Servere HPC",
+            "room_idx": 0,
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Stație dedicată prelucrării de imagini și modele AI.",
+            "specs": "Intel Core i9 14900K, 128GB DDR5 5600MHz, Dual Nvidia GeForce RTX 4090 24GB, 4TB NVMe SSD.",
+        },
+        {
+            "nume": "Cluster GPU Deep Learning 8x A100",
+            "cod": "HPC-A100-NODE-01",
+            "cat": "Calculatoare & Servere HPC",
+            "room_idx": 1 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Nod cluster pentru antrenare paralelă LLM și simulări masive.",
+            "specs": "8x Nvidia A100 80GB SXM4, 1024GB RAM ECC, 30TB NVMe RAID-0, Interfață 200Gb/s InfiniBand.",
+        },
+        {
+            "nume": "Braț Robotic Universal Robots UR3e",
+            "cod": "ROB-UR3E-01",
+            "cat": "Robotică & Sisteme Autonome",
+            "room_idx": 2 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Braț robotic colaborativ cu 6 grade de libertate pentru cercetare aplicată.",
+            "specs": "Rază de acțiune 500mm, sarcină utilă 3kg, precizie +/-0.03mm, senzor integrat de forță și cuplu.",
+        },
+        {
+            "nume": "Platformă Mobilă Cercetare TurtleBot 4 Pro",
+            "cod": "ROB-TB4-01",
+            "cat": "Robotică & Sisteme Autonome",
+            "room_idx": 3 % len(rooms),
+            "stare": StareTehnica.IN_MENTENANTA,
+            "desc": "Platformă mobilă autonomă pentru mapare SLAM și navigație autonomă ROS 2.",
+            "specs": "Bază mecanică iRobot Create 3, SBC Raspberry Pi 4 4GB, LiDAR 2D RPLIDAR A1M8, Cameră OAK-D-Pro.",
+        },
+        {
+            "nume": "Osciloscop Digital Keysight InfiniiVision 1GHz",
+            "cod": "MS-KEYSIGHT-1GHZ",
+            "cat": "Aparatură Măsură & Osciloscoape",
+            "room_idx": 4 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Osciloscop digital de înaltă precizie pentru semnale rapide.",
+            "specs": "4 canale analogice, lățime bandă 1 GHz, rată eșantionare 5 GSa/s, decodoare I2C/SPI/CAN/LIN.",
+        },
+        {
+            "nume": "Analizor de Spectru Rohde & Schwarz FPC1500",
+            "cod": "MS-RS-FPC1500",
+            "cat": "Aparatură Măsură & Osciloscoape",
+            "room_idx": 5 % len(rooms),
+            "stare": StareTehnica.DEFECTA,
+            "desc": "Analizor de spectru cu funcție de generator de urmărire și analizor rețea vectorial.",
+            "specs": "Gama frecvențe 5 kHz până la 3 GHz, zgomot de fond -165 dBm, ecran color WXGA 10.1 inch.",
+        },
+        {
+            "nume": "Kit Dezvoltare FPGA Xilinx Zynq UltraScale+",
+            "cod": "IOT-ZYNQ-MPSoC",
+            "cat": "Kituri IoT & Sisteme Embedded",
+            "room_idx": 6 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Platformă de calcul eterogen pentru procesare semnal și inteligență artificială edge.",
+            "specs": "Quad-core ARM Cortex-A53, Dual Cortex-R5F, FPGA UltraScale+ 256k logic cells, 4GB DDR4.",
+        },
+        {
+            "nume": "Imprimantă 3D Bambu Lab X1-Carbon Combo",
+            "cod": "PRT-BAMBU-X1C",
+            "cat": "Imprimare 3D & Prototipare Rapidă",
+            "room_idx": 7 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Imprimantă 3D rapidă de înaltă rezoluție cu cameră închisă pentru filamente tehnice.",
+            "specs": "Volum 256x256x256mm, sistem automat AMS 4 materiale, viteză până la 500mm/s, senzor dual LiDAR.",
+        },
+    ]
+
+    res_map: dict[str, Resource] = {}
+    for r_data in resources_data:
+        existing = (await db.execute(select(Resource).where(Resource.cod_inventar == r_data["cod"]))).scalars().first()
+        if not existing:
+            cat = cat_map.get(r_data["cat"])
+            room = rooms[r_data["room_idx"]]
+            res = Resource(
+                nume=r_data["nume"],
+                cod_inventar=r_data["cod"],
+                categorie_id=cat.id if cat else 1,
+                sala_id=room.id,
+                stare_tehnica=r_data["stare"],
+                descriere=r_data["desc"],
+                specificatii=r_data["specs"],
+                is_active=True,
+            )
+            db.add(res)
+            await db.flush()
+            res_map[r_data["cod"]] = res
+        else:
+            res_map[r_data["cod"]] = existing
+
+    # 3. Reservations
+    now = datetime.now(timezone.utc)
+    if student1 and "HPC-RTX-4090-01" in res_map:
+        existing_res = (
+            await db.execute(
+                select(Reservation).where(
+                    Reservation.resursa_id == res_map["HPC-RTX-4090-01"].id,
+                    Reservation.utilizator_id == student1.id_utilizator,
+                )
+            )
+        ).scalars().first()
+        if not existing_res:
+            db.add(
+                Reservation(
+                    resursa_id=res_map["HPC-RTX-4090-01"].id,
+                    utilizator_id=student1.id_utilizator,
+                    data_inceput=now - timedelta(days=1),
+                    data_sfarsit=now + timedelta(days=2),
+                    stare=StareRezervare.APROBATA,
+                    scop="Antrenare modele lingvistice mici (SLM) pentru lucrarea de licență.",
+                )
+            )
+
+    if student2 and "ROB-UR3E-01" in res_map:
+        existing_res = (
+            await db.execute(
+                select(Reservation).where(
+                    Reservation.resursa_id == res_map["ROB-UR3E-01"].id,
+                    Reservation.utilizator_id == student2.id_utilizator,
+                )
+            )
+        ).scalars().first()
+        if not existing_res:
+            db.add(
+                Reservation(
+                    resursa_id=res_map["ROB-UR3E-01"].id,
+                    utilizator_id=student2.id_utilizator,
+                    data_inceput=now + timedelta(days=1),
+                    data_sfarsit=now + timedelta(days=4),
+                    stare=StareRezervare.IN_ASTEPTARE,
+                    scop="Experimente de cinematică directă și inversă în laboratorul de cercetare.",
+                )
+            )
+
+    if prof1 and "IOT-ZYNQ-MPSoC" in res_map:
+        existing_res = (
+            await db.execute(
+                select(Reservation).where(
+                    Reservation.resursa_id == res_map["IOT-ZYNQ-MPSoC"].id,
+                    Reservation.utilizator_id == prof1.id_utilizator,
+                )
+            )
+        ).scalars().first()
+        if not existing_res:
+            db.add(
+                Reservation(
+                    resursa_id=res_map["IOT-ZYNQ-MPSoC"].id,
+                    utilizator_id=prof1.id_utilizator,
+                    data_inceput=now - timedelta(days=7),
+                    data_sfarsit=now - timedelta(days=2),
+                    stare=StareRezervare.FINALIZATA,
+                    scop="Pregătire suport curs și laborator Sisteme Reconfigurabile.",
+                )
+            )
+
+    # 4. Technical History
+    if lab1 and "ROB-TB4-01" in res_map:
+        existing_th = (
+            await db.execute(
+                select(TechnicalHistory).where(
+                    TechnicalHistory.resursa_id == res_map["ROB-TB4-01"].id,
+                )
+            )
+        ).scalars().first()
+        if not existing_th:
+            db.add(
+                TechnicalHistory(
+                    resursa_id=res_map["ROB-TB4-01"].id,
+                    utilizator_id=lab1.id_utilizator,
+                    tip_interventie="MENTENANTA_PREVENTIVA",
+                    descriere="Calibrare senzori odometrie, curățare ansamblu optic LiDAR și actualizare firmware ROS 2 Jazzy.",
+                    stare_anterioara=StareTehnica.DISPONIBILA,
+                    stare_noua=StareTehnica.IN_MENTENANTA,
+                )
+            )
+
+    if prof1 and "MS-RS-FPC1500" in res_map:
+        existing_th = (
+            await db.execute(
+                select(TechnicalHistory).where(
+                    TechnicalHistory.resursa_id == res_map["MS-RS-FPC1500"].id,
+                )
+            )
+        ).scalars().first()
+        if not existing_th:
+            db.add(
+                TechnicalHistory(
+                    resursa_id=res_map["MS-RS-FPC1500"].id,
+                    utilizator_id=prof1.id_utilizator,
+                    tip_interventie="RAPORT_DEFECTIUNE",
+                    descriere="Atenuatorul de intrare RF s-a ars în urma unei supratensiuni accidentale pe portul N (50 Ohm). Trimis la service autorizat pentru înlocuire modul.",
+                    stare_anterioara=StareTehnica.DISPONIBILA,
+                    stare_noua=StareTehnica.DEFECTA,
+                )
+            )
+
+    await db.commit()
+
+
 async def seed_base(db: AsyncSession) -> None:
     await seed_roles_and_permissions(db)
     await seed_users(db)
@@ -437,6 +684,7 @@ async def seed_base(db: AsyncSession) -> None:
 async def seed_all(db: AsyncSession) -> None:
     await seed_base(db)
     await seed_academic_structure(db)
+    await seed_resources_and_reservations(db)
 
 
 async def _run() -> None:
