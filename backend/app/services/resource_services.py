@@ -190,7 +190,36 @@ class ResourceService:
             res.specificatii = changes["specificatii"].strip() if changes["specificatii"] else None
 
         if "stare_tehnica" in changes and changes["stare_tehnica"]:
-            res.stare_tehnica = changes["stare_tehnica"]
+            stare_veche = res.stare_tehnica
+            stare_noua = changes["stare_tehnica"]
+            if stare_noua != stare_veche:
+                res.stare_tehnica = stare_noua
+                from app.db.models import TechnicalHistory
+                from app.repositories.technical_history_repository import TechnicalHistoryRepository
+                tech_repo = TechnicalHistoryRepository()
+                th = TechnicalHistory(
+                    resursa_id=res.id,
+                    utilizator_id=actor.id_utilizator,
+                    tip_interventie="MODIFICARE_STARE_TEHNICA",
+                    descriere=f"Stare modificata din {stare_veche.value} in {stare_noua.value} de catre {actor.nume}.",
+                    stare_anterioara=stare_veche,
+                    stare_noua=stare_noua,
+                )
+                await tech_repo.add(db, th)
+
+                if stare_noua in [StareTehnica.DEFECTA, StareTehnica.IN_MENTENANTA]:
+                    from app.db.models import Reservation, StareRezervare
+                    from sqlalchemy import select
+                    pending_query = select(Reservation).where(
+                        Reservation.resursa_id == res.id,
+                        Reservation.stare == StareRezervare.IN_ASTEPTARE,
+                    )
+                    pending_items = (await db.execute(pending_query)).scalars().all()
+                    for pres in pending_items:
+                        pres.stare = StareRezervare.RESPINSA
+                        pres.motiv_respingere = f"Resursa a devenit indisponibila: {stare_noua.value}."
+            else:
+                res.stare_tehnica = stare_noua
 
         if "is_active" in changes and changes["is_active"] is not None:
             res.is_active = changes["is_active"]
