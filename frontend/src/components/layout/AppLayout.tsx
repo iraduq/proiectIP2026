@@ -91,12 +91,17 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
   }
 
   const isAdmin = user?.rol === "ADMINISTRATOR" || user?.permissions?.includes("structure:manage")
+  const isStaff =
+    user?.rol === "ADMINISTRATOR" ||
+    user?.rol === "PROFESOR" ||
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    user?.permissions?.includes("technical_history:read")
 
   const navItems = [
     { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
     { label: "Resurse & Echipamente", path: "/resources", icon: Cpu },
     { label: "Rezervări", path: "/reservations", icon: Calendar },
-    { label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench },
+    ...(isStaff ? [{ label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench }] : []),
     { label: "Săli de cercetare", path: "/rooms", icon: DoorOpen },
     ...(isAdmin ? [{ label: "Structură Academică", path: "/admin/academic", icon: Building2 }] : []),
   ]

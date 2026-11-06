@@ -242,14 +242,20 @@ export function RoomsPage() {
     setModalError(null)
     setIsSubmitting(true)
     try {
-      await academicApi.updateRoom(editingRoom.id, {
-        nume: formNume.trim(),
-        cod: formCod.trim().toUpperCase(),
-        tip_sala: formTip,
-        etaj: Number(formEtaj),
-        capacitate: Number(formCapacitate),
-        descriere: formDescriere.trim() || null,
-      })
+      const payload = isAdmin
+        ? {
+            nume: formNume.trim(),
+            cod: formCod.trim().toUpperCase(),
+            tip_sala: formTip,
+            etaj: Number(formEtaj),
+            capacitate: Number(formCapacitate),
+            descriere: formDescriere.trim() || null,
+          }
+        : {
+            capacitate: Number(formCapacitate),
+            descriere: formDescriere.trim() || null,
+          }
+      await academicApi.updateRoom(editingRoom.id, payload)
       setIsEditModalOpen(false)
       loadRooms()
     } catch (err: any) {
@@ -793,6 +799,12 @@ export function RoomsPage() {
                 </select>
               </div>
 
+              {!isAdmin && (
+                <div className="p-3 rounded-xl bg-neutral-100 border border-neutral-200 text-xs text-neutral-700">
+                  În calitate de responsabil de sală, puteți actualiza capacitatea și descrierea conform regulamentului. Modificarea codului, numelui sau etajului este rezervată administratorilor.
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-semibold text-neutral-700 block mb-1">Cod Sală</label>
@@ -802,7 +814,8 @@ export function RoomsPage() {
                     value={formCod}
                     onChange={(e) => setFormCod(e.target.value)}
                     required
-                    className="h-9 text-xs"
+                    disabled={!isAdmin}
+                    className="h-9 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                   />
                 </div>
                 <div>
@@ -813,7 +826,8 @@ export function RoomsPage() {
                     value={formNume}
                     onChange={(e) => setFormNume(e.target.value)}
                     required
-                    className="h-9 text-xs"
+                    disabled={!isAdmin}
+                    className="h-9 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                   />
                 </div>
               </div>
@@ -824,7 +838,8 @@ export function RoomsPage() {
                   <select
                     value={formTip}
                     onChange={(e) => setFormTip(e.target.value as TipSala)}
-                    className="w-full h-9 rounded-lg border border-neutral-200 px-2 bg-neutral-50 text-xs"
+                    disabled={!isAdmin}
+                    className="w-full h-9 rounded-lg border border-neutral-200 px-2 bg-neutral-50 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                   >
                     <option value="LABORATOR">Laborator</option>
                     <option value="SALA_CERCETARE">Sală Cercetare</option>
@@ -842,7 +857,8 @@ export function RoomsPage() {
                     value={formEtaj}
                     onChange={(e) => setFormEtaj(Number(e.target.value))}
                     required
-                    className="h-9 text-xs"
+                    disabled={!isAdmin}
+                    className="h-9 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                   />
                 </div>
                 <div>
