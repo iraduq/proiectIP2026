@@ -70,14 +70,10 @@ ROLE_PERMISSIONS_MAP: dict[UserRole, list[PermissionCode]] = {
     UserRole.PROFESOR: [
         PermissionCode.STRUCTURE_READ,
         PermissionCode.RESOURCES_READ,
-        PermissionCode.RESOURCES_UPDATE,
         PermissionCode.BOOKINGS_READ,
         PermissionCode.BOOKINGS_CREATE,
         PermissionCode.BOOKINGS_CANCEL,
         PermissionCode.BOOKINGS_APPROVE,
-        PermissionCode.BOOKINGS_RETURN,
-        PermissionCode.TECHNICAL_HISTORY_READ,
-        PermissionCode.TECHNICAL_HISTORY_CREATE,
     ],
     UserRole.RESPONSABIL_LABORATOR: [
         PermissionCode.STRUCTURE_READ,

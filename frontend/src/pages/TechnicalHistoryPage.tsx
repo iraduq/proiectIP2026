@@ -38,18 +38,23 @@ export function TechnicalHistoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  const isStaff =
+  const canAccess =
     user?.rol === "ADMINISTRATOR" ||
-    user?.rol === "PROFESOR" ||
-    user?.rol === "RESPONSABIL_LABORATOR"
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("technical_history:read"))
+
+  const canCreate =
+    user?.rol === "ADMINISTRATOR" ||
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("technical_history:create"))
 
   useEffect(() => {
-    if (isStaff) {
+    if (canAccess) {
       loadData()
     } else {
       setIsLoading(false)
     }
-  }, [isStaff])
+  }, [canAccess])
 
   const loadData = async () => {
     setIsLoading(true)
@@ -72,7 +77,7 @@ export function TechnicalHistoryPage() {
 
   const handleCreateLog = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedResourceId) return
+    if (!selectedResourceId || !canCreate) return
     setIsSubmitting(true)
     try {
       await technicalHistoryApi.createTechnicalHistory({
@@ -140,7 +145,7 @@ export function TechnicalHistoryPage() {
     }
   }
 
-  if (!isStaff) {
+  if (!canAccess) {
     return (
       <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal Tehnic"]}>
         <div className="p-8 max-w-2xl mx-auto my-12 text-center space-y-4 bg-white rounded-2xl border border-neutral-200 shadow-sm">
@@ -149,7 +154,7 @@ export function TechnicalHistoryPage() {
           </div>
           <h2 className="text-xl font-bold text-neutral-900">Acces Restricționat</h2>
           <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
-            Conform cerințelor PRD (FR-02, FR-11), consultarea și consemnarea în fișele de mentenanță și jurnalul tehnic sunt rezervate exclusiv personalului autorizat (Responsabili de laborator, Profesori și Administratori).
+            Conform cerințelor PRD (FR-02, FR-11), consultarea și consemnarea în fișele de mentenanță și jurnalul tehnic sunt rezervate exclusiv personalului tehnic autorizat (Responsabili de laborator și Administratori).
           </p>
           <div className="pt-2">
             <Button
@@ -167,7 +172,6 @@ export function TechnicalHistoryPage() {
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal Tehnic"]}>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-200 pb-5">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900 flex items-center gap-2.5">
@@ -178,7 +182,7 @@ export function TechnicalHistoryPage() {
               Istoric complet și imutabil al intervențiilor, reparațiilor și raportărilor de defecțiuni.
             </p>
           </div>
-          {isStaff && (
+          {canCreate && (
             <Button
               onClick={() => setIsModalOpen(true)}
               className="bg-black hover:bg-neutral-800 text-white gap-2 shadow-sm"
