@@ -86,11 +86,15 @@ export function ResourcesPage() {
   const [newCatDesc, setNewCatDesc] = useState("")
   const [isSubmittingCat, setIsSubmittingCat] = useState(false)
 
-  const isStaff =
-    user?.rol === "ADMINISTRATOR" ||
-    user?.rol === "PROFESOR" ||
-    user?.rol === "RESPONSABIL_LABORATOR"
   const isAdmin = user?.rol === "ADMINISTRATOR"
+  const canManageResource =
+    isAdmin ||
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("resources:update"))
+  const canManageTechnicalHistory =
+    isAdmin ||
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("technical_history:create"))
 
   useEffect(() => {
     loadInitialData()
@@ -198,7 +202,7 @@ export function ResourcesPage() {
 
   const handleAddTechnicalLog = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!historyModalResource) return
+    if (!historyModalResource || !canManageTechnicalHistory) return
     setIsSubmittingLog(true)
     try {
       await technicalHistoryApi.createTechnicalHistory({
@@ -208,7 +212,6 @@ export function ResourcesPage() {
         stare_noua: newLogState,
       })
       setSuccessMsg(`Intervenția tehnică pentru „${historyModalResource.nume}” a fost salvată.`)
-      // Refresh modal
       const res = await technicalHistoryApi.getTechnicalHistory({
         resursa_id: historyModalResource.id,
         limit: 50,
@@ -633,7 +636,7 @@ export function ResourcesPage() {
                             </Button>
                           )}
 
-                          {isStaff && (
+                          {canManageResource && (
                             <>
                               <Button
                                 size="sm"
@@ -801,72 +804,72 @@ export function ResourcesPage() {
               </div>
 
               <div className="p-6 overflow-y-auto space-y-6">
-                {/* Form to log new event */}
-                <form
-                  onSubmit={handleAddTechnicalLog}
-                  className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-3"
-                >
-                  <div className="font-semibold text-xs text-neutral-800 flex items-center gap-1.5">
-                    <Plus className="h-3.5 w-3.5 text-neutral-600" />
-                    Înregistrează Intervenție / Actualizează Starea
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-medium text-neutral-600 mb-1">
-                        Tip Intervenție
-                      </label>
-                      <select
-                        value={newLogType}
-                        onChange={(e) => setNewLogType(e.target.value)}
-                        className="w-full h-8 rounded border border-neutral-200 bg-white px-2 text-xs"
-                      >
-                        <option value="MENTENANTA_PREVENTIVA">Mentenanță Preventivă</option>
-                        <option value="DEFECTIUNE">Defecțiune Raportată</option>
-                        <option value="REPARATIE">Reparație / Înlocuire Piese</option>
-                        <option value="CALIBRARE">Calibrare & Testare</option>
-                        <option value="INSTALARE_SOFTWARE">Actualizare Software/Firmware</option>
-                      </select>
+                {canManageTechnicalHistory && (
+                  <form
+                    onSubmit={handleAddTechnicalLog}
+                    className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-3"
+                  >
+                    <div className="font-semibold text-xs text-neutral-800 flex items-center gap-1.5">
+                      <Plus className="h-3.5 w-3.5 text-neutral-600" />
+                      Înregistrează Intervenție / Actualizează Starea
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-neutral-600 mb-1">
+                          Tip Intervenție
+                        </label>
+                        <select
+                          value={newLogType}
+                          onChange={(e) => setNewLogType(e.target.value)}
+                          className="w-full h-8 rounded border border-neutral-200 bg-white px-2 text-xs"
+                        >
+                          <option value="MENTENANTA_PREVENTIVA">Mentenanță Preventivă</option>
+                          <option value="DEFECTIUNE">Defecțiune Raportată</option>
+                          <option value="REPARATIE">Reparație / Înlocuire Piese</option>
+                          <option value="CALIBRARE">Calibrare & Testare</option>
+                          <option value="INSTALARE_SOFTWARE">Actualizare Software/Firmware</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-neutral-600 mb-1">
+                          Noua Stare Tehnică
+                        </label>
+                        <select
+                          value={newLogState}
+                          onChange={(e) => setNewLogState(e.target.value as StareTehnica)}
+                          className="w-full h-8 rounded border border-neutral-200 bg-white px-2 text-xs"
+                        >
+                          <option value="DISPONIBILA">Disponibilă (Operațională)</option>
+                          <option value="IN_MENTENANTA">În Mentenanță</option>
+                          <option value="DEFECTA">Defectă (Blocată)</option>
+                        </select>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[11px] font-medium text-neutral-600 mb-1">
-                        Noua Stare Tehnică
+                        Descriere Tehnică Intervenție
                       </label>
-                      <select
-                        value={newLogState}
-                        onChange={(e) => setNewLogState(e.target.value as StareTehnica)}
-                        className="w-full h-8 rounded border border-neutral-200 bg-white px-2 text-xs"
-                      >
-                        <option value="DISPONIBILA">Disponibilă (Operațională)</option>
-                        <option value="IN_MENTENANTA">În Mentenanță</option>
-                        <option value="DEFECTA">Defectă (Blocată)</option>
-                      </select>
+                      <textarea
+                        required
+                        rows={2}
+                        placeholder="Detaliați acțiunile efectuate, componentele înlocuite sau natura defecțiunii..."
+                        value={newLogDesc}
+                        onChange={(e) => setNewLogDesc(e.target.value)}
+                        className="w-full text-xs rounded border border-neutral-200 p-2 bg-white focus:outline-none focus:ring-1 focus:ring-black"
+                      />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-neutral-600 mb-1">
-                      Descriere Tehnică Intervenție
-                    </label>
-                    <textarea
-                      required
-                      rows={2}
-                      placeholder="Detaliați acțiunile efectuate, componentele înlocuite sau natura defecțiunii..."
-                      value={newLogDesc}
-                      onChange={(e) => setNewLogDesc(e.target.value)}
-                      className="w-full text-xs rounded border border-neutral-200 p-2 bg-white focus:outline-none focus:ring-1 focus:ring-black"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      type="submit"
-                      disabled={isSubmittingLog || !newLogDesc.trim()}
-                      className="h-8 text-xs bg-black text-white hover:bg-neutral-800"
-                    >
-                      {isSubmittingLog ? "Se salvează..." : "Salvează în Jurnal"}
-                    </Button>
-                  </div>
-                </form>
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        disabled={isSubmittingLog || !newLogDesc.trim()}
+                        className="h-8 text-xs bg-black text-white hover:bg-neutral-800"
+                      >
+                        {isSubmittingLog ? "Se salvează..." : "Salvează în Jurnal"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
 
-                {/* History list */}
                 <div className="space-y-3">
                   <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                     Istoric Imutabil Intervenții ({techHistory.length})

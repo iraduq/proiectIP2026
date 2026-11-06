@@ -41,10 +41,16 @@ export function ReservationsPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
 
   const isStudent = user?.rol === "STUDENT"
-  const isStaff =
+  const canApprove =
     user?.rol === "ADMINISTRATOR" ||
     user?.rol === "PROFESOR" ||
-    user?.rol === "RESPONSABIL_LABORATOR"
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("bookings:approve"))
+  const canReturn =
+    user?.rol === "ADMINISTRATOR" ||
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("bookings:return"))
+  const isStaff = canApprove || canReturn
 
   useEffect(() => {
     loadData()
@@ -409,10 +415,9 @@ export function ReservationsPage() {
                               </Button>
                             )}
 
-                          {/* Staff Management actions */}
-                          {isStaff && activeTab === "MANAGEMENT" && (
+                          {activeTab === "MANAGEMENT" && (
                             <>
-                              {r.stare === "IN_ASTEPTARE" && (
+                              {canApprove && r.stare === "IN_ASTEPTARE" && (
                                 <>
                                   <Button
                                     size="sm"
@@ -434,7 +439,7 @@ export function ReservationsPage() {
                                 </>
                               )}
 
-                              {r.stare === "APROBATA" && (
+                              {canReturn && r.stare === "APROBATA" && (
                                 <Button
                                   size="sm"
                                   onClick={() => {
