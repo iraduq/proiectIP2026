@@ -73,7 +73,6 @@ ROLE_PERMISSIONS_MAP: dict[UserRole, list[PermissionCode]] = {
         PermissionCode.BOOKINGS_READ,
         PermissionCode.BOOKINGS_CREATE,
         PermissionCode.BOOKINGS_CANCEL,
-        PermissionCode.BOOKINGS_APPROVE,
     ],
     UserRole.RESPONSABIL_LABORATOR: [
         PermissionCode.STRUCTURE_READ,
@@ -81,6 +80,8 @@ ROLE_PERMISSIONS_MAP: dict[UserRole, list[PermissionCode]] = {
         PermissionCode.RESOURCES_UPDATE,
         PermissionCode.RESOURCES_MAINTENANCE,
         PermissionCode.BOOKINGS_READ,
+        PermissionCode.BOOKINGS_CREATE,
+        PermissionCode.BOOKINGS_CANCEL,
         PermissionCode.BOOKINGS_APPROVE,
         PermissionCode.BOOKINGS_RETURN,
         PermissionCode.TECHNICAL_HISTORY_READ,

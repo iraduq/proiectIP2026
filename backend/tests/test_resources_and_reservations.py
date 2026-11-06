@@ -61,7 +61,7 @@ async def test_category_flow(client: AsyncClient, db_session: AsyncSession) -> N
 
 
 @pytest.mark.asyncio
-async def test_resource_crud_and_scoping(client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_resource_crud_and_moving_between_labs(client: AsyncClient, db_session: AsyncSession) -> None:
     await seed_all(db_session)
     admin_token = await get_auth_token(client, "admin1@univ.ro")
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -70,9 +70,9 @@ async def test_resource_crud_and_scoping(client: AsyncClient, db_session: AsyncS
     assert res.status_code == 200
     assert res.json()["total"] >= 5
 
-    room = (await db_session.execute(select(Room).order_by(Room.id.asc()))).scalars().first()
+    rooms = (await db_session.execute(select(Room).order_by(Room.id.asc()))).scalars().all()
     category = (await db_session.execute(select(Category).order_by(Category.id.asc()))).scalars().first()
-    assert room is not None
+    assert len(rooms) >= 2
     assert category is not None
 
     res_create = await client.post(
@@ -82,7 +82,7 @@ async def test_resource_crud_and_scoping(client: AsyncClient, db_session: AsyncS
             "nume": "Nvidia Jetson AGX Orin 64GB",
             "cod_inventar": "IOT-JETSON-ORIN-01",
             "categorie_id": category.id,
-            "sala_id": room.id,
+            "sala_id": rooms[0].id,
             "descriere": "Modul AI edge computing 275 TOPS",
             "specificatii": "GPU Ampere 2048 nuclee, CPU ARM Cortex-A78AE 12 nuclee, 64GB LPDDR5",
             "stare_tehnica": "DISPONIBILA",
@@ -98,10 +98,25 @@ async def test_resource_crud_and_scoping(client: AsyncClient, db_session: AsyncS
             "nume": "Duplicate Item",
             "cod_inventar": "IOT-JETSON-ORIN-01",
             "categorie_id": category.id,
-            "sala_id": room.id,
+            "sala_id": rooms[0].id,
         },
     )
     assert res_dup.status_code == 409
+
+    lab_token = await get_auth_token(client, "lab1@univ.ro")
+    lab_headers = {"Authorization": f"Bearer {lab_token}"}
+    res_move = await client.patch(
+        f"/api/resources/{created_id}",
+        headers=lab_headers,
+        json={"sala_id": rooms[1].id},
+    )
+    assert res_move.status_code == 200
+    assert res_move.json()["sala_id"] == rooms[1].id
+
+    res_logs = await client.get(f"/api/technical-history?resursa_id={created_id}", headers=lab_headers)
+    assert res_logs.status_code == 200
+    logs_data = res_logs.json()["items"]
+    assert any(log["tip_interventie"] == "TRANSFER_SALA" for log in logs_data)
 
     student_token = await get_auth_token(client, "student1@univ.ro")
     student_headers = {"Authorization": f"Bearer {student_token}"}
@@ -116,8 +131,6 @@ async def test_reservation_rules_and_lifecycle(client: AsyncClient, db_session: 
     student_headers = {"Authorization": f"Bearer {student_token}"}
     prof_token = await get_auth_token(client, "prof1@univ.ro")
     prof_headers = {"Authorization": f"Bearer {prof_token}"}
-    lab_token = await get_auth_token(client, "lab1@univ.ro")
-    lab_headers = {"Authorization": f"Bearer {lab_token}"}
 
     res_available = (
         await db_session.execute(
@@ -179,14 +192,25 @@ async def test_reservation_rules_and_lifecycle(client: AsyncClient, db_session: 
     )
     assert res_conflict.status_code == 409
 
-    res_approve = await client.post(f"/api/reservations/{booking_id}/approve", headers=prof_headers)
+    res_prof_approve = await client.post(f"/api/reservations/{booking_id}/approve", headers=prof_headers)
+    assert res_prof_approve.status_code == 403
+
+    room = await db_session.get(Room, res_available.sala_id)
+    assert room is not None
+    room_resp = await db_session.get(User, room.responsabil_id)
+    assert room_resp is not None
+
+    manager_token = await get_auth_token(client, room_resp.email)
+    manager_headers = {"Authorization": f"Bearer {manager_token}"}
+
+    res_approve = await client.post(f"/api/reservations/{booking_id}/approve", headers=manager_headers)
     assert res_approve.status_code == 200
     assert res_approve.json()["stare"] == "APROBATA"
 
     res_prof_return = await client.post(f"/api/reservations/{booking_id}/return", headers=prof_headers)
     assert res_prof_return.status_code == 403
 
-    res_return = await client.post(f"/api/reservations/{booking_id}/return", headers=lab_headers)
+    res_return = await client.post(f"/api/reservations/{booking_id}/return", headers=manager_headers)
     assert res_return.status_code == 200
     assert res_return.json()["stare"] == "FINALIZATA"
 
