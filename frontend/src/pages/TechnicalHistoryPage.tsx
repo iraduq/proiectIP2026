@@ -44,8 +44,12 @@ export function TechnicalHistoryPage() {
     user?.rol === "RESPONSABIL_LABORATOR"
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (isStaff) {
+      loadData()
+    } else {
+      setIsLoading(false)
+    }
+  }, [isStaff])
 
   const loadData = async () => {
     setIsLoading(true)
@@ -134,6 +138,30 @@ export function TechnicalHistoryPage() {
           </span>
         )
     }
+  }
+
+  if (!isStaff) {
+    return (
+      <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal Tehnic"]}>
+        <div className="p-8 max-w-2xl mx-auto my-12 text-center space-y-4 bg-white rounded-2xl border border-neutral-200 shadow-sm">
+          <div className="h-14 w-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <h2 className="text-xl font-bold text-neutral-900">Acces Restricționat</h2>
+          <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+            Conform cerințelor PRD (FR-02, FR-11), consultarea și consemnarea în fișele de mentenanță și jurnalul tehnic sunt rezervate exclusiv personalului autorizat (Responsabili de laborator, Profesori și Administratori).
+          </p>
+          <div className="pt-2">
+            <Button
+              onClick={() => window.location.href = "/dashboard"}
+              className="text-xs bg-black text-white hover:bg-neutral-800"
+            >
+              Înapoi la Panoul de bord
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    )
   }
 
   return (

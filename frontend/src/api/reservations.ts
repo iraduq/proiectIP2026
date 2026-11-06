@@ -62,8 +62,13 @@ export const reservationsApi = {
     return res.data
   },
 
-  async returnReservation(id: number): Promise<Reservation> {
-    const res = await api.post<Reservation>(`/reservations/${id}/return`)
+  async returnReservation(
+    id: number,
+    params?: { stare_echipament?: string; observatii?: string }
+  ): Promise<Reservation> {
+    const res = await api.post<Reservation>(`/reservations/${id}/return`, null, {
+      params: params || undefined,
+    })
     return res.data
   },
 }

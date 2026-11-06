@@ -257,7 +257,14 @@ export function ResourcesPage() {
     setIsSubmittingResource(false)
     try {
       if (editResource) {
-        await resourcesApi.updateResource(editResource.id, formData)
+        const payload = isAdmin
+          ? formData
+          : {
+              stare_tehnica: formData.stare_tehnica,
+              specificatii: formData.specificatii,
+              descriere: formData.descriere,
+            }
+        await resourcesApi.updateResource(editResource.id, payload)
         setSuccessMsg("Resursa a fost actualizată cu succes.")
       } else {
         await resourcesApi.createResource(formData)
@@ -627,38 +634,38 @@ export function ResourcesPage() {
                           )}
 
                           {isStaff && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenHistory(res)}
-                              title="Jurnal Tehnic & Mentenanță"
-                              className="h-8 w-8 p-0 border-neutral-200 text-neutral-600 hover:text-neutral-900"
-                            >
-                              <Wrench className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-
-                          {isAdmin && (
                             <>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleOpenEdit(res)}
-                                title="Editare resursă"
+                                onClick={() => handleOpenHistory(res)}
+                                title="Jurnal Tehnic & Mentenanță"
                                 className="h-8 w-8 p-0 border-neutral-200 text-neutral-600 hover:text-neutral-900"
                               >
-                                <Edit2 className="h-3.5 w-3.5" />
+                                <Wrench className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleDeleteResource(res)}
-                                title="Dezactivare"
-                                className="h-8 w-8 p-0 border-neutral-200 text-rose-600 hover:bg-rose-50"
+                                onClick={() => handleOpenEdit(res)}
+                                title="Editare stare & detalii tehnice"
+                                className="h-8 w-8 p-0 border-neutral-200 text-neutral-600 hover:text-neutral-900"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Edit2 className="h-3.5 w-3.5" />
                               </Button>
                             </>
+                          )}
+
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteResource(res)}
+                              title="Dezactivare"
+                              className="h-8 w-8 p-0 border-neutral-200 text-rose-600 hover:bg-rose-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -922,6 +929,12 @@ export function ResourcesPage() {
               </div>
 
               <form onSubmit={handleSubmitResource} className="p-6 space-y-3.5">
+                {!isAdmin && (
+                  <div className="p-3 rounded-xl bg-neutral-100 border border-neutral-200 text-xs text-neutral-700">
+                    În calitate de personal de laborator / profesor, puteți actualiza starea tehnică, specificațiile și descrierea. Modificarea codului de inventar și a sălii este rezervată administratorilor.
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1">
                     Denumire Resursă / Echipament
@@ -931,7 +944,8 @@ export function ResourcesPage() {
                     value={formData.nume}
                     onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
                     placeholder="ex: Stație AI RTX 4090"
-                    className="text-xs"
+                    disabled={!isAdmin}
+                    className="text-xs disabled:opacity-60 disabled:bg-neutral-100"
                   />
                 </div>
 
@@ -943,7 +957,8 @@ export function ResourcesPage() {
                       value={formData.cod_inventar}
                       onChange={(e) => setFormData({ ...formData, cod_inventar: e.target.value })}
                       placeholder="ex: RES-HPC-001"
-                      className="text-xs font-mono"
+                      disabled={!isAdmin}
+                      className="text-xs font-mono disabled:opacity-60 disabled:bg-neutral-100"
                     />
                   </div>
                   <div>
@@ -970,7 +985,8 @@ export function ResourcesPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, categorie_id: Number(e.target.value) })
                       }
-                      className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs"
+                      disabled={!isAdmin}
+                      className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                     >
                       {categories.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -984,7 +1000,8 @@ export function ResourcesPage() {
                     <select
                       value={formData.sala_id}
                       onChange={(e) => setFormData({ ...formData, sala_id: Number(e.target.value) })}
-                      className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs"
+                      disabled={!isAdmin}
+                      className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs disabled:opacity-60 disabled:bg-neutral-100"
                     >
                       {rooms.map((r) => (
                         <option key={r.id} value={r.id}>

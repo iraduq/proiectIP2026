@@ -34,6 +34,10 @@ export function ReservationsPage() {
   const [rejectModalReservation, setRejectModalReservation] = useState<Reservation | null>(null)
   const [rejectionReason, setRejectionReason] = useState("")
   const [isRejecting, setIsRejecting] = useState(false)
+  const [returnModalReservation, setReturnModalReservation] = useState<Reservation | null>(null)
+  const [returnCondition, setReturnCondition] = useState<"DISPONIBILA" | "IN_MENTENANTA" | "DEFECTA">("DISPONIBILA")
+  const [returnNotes, setReturnNotes] = useState("")
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
 
   const isStudent = user?.rol === "STUDENT"
@@ -117,14 +121,24 @@ export function ReservationsPage() {
     }
   }
 
-  const handleReturn = async (id: number, name: string) => {
-    if (!confirm(`Confirmați predarea și returul echipamentului „${name}”?`)) return
+  const handleConfirmReturn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!returnModalReservation) return
+    setIsSubmittingReturn(true)
     try {
-      await reservationsApi.returnReservation(id)
-      setActionSuccess(`Returul pentru „${name}” a fost înregistrat cu succes.`)
+      await reservationsApi.returnReservation(returnModalReservation.id, {
+        stare_echipament: returnCondition,
+        observatii: returnNotes.trim() || undefined,
+      })
+      setActionSuccess(`Returul pentru „${returnModalReservation.resursa_nume}” a fost consemnat cu succes.`)
+      setReturnModalReservation(null)
+      setReturnNotes("")
+      setReturnCondition("DISPONIBILA")
       loadData()
     } catch (err: any) {
       alert(err.response?.data?.detail || "Eroare la finalizarea rezervării.")
+    } finally {
+      setIsSubmittingReturn(false)
     }
   }
 
@@ -423,8 +437,12 @@ export function ReservationsPage() {
                               {r.stare === "APROBATA" && (
                                 <Button
                                   size="sm"
-                                  onClick={() => handleReturn(r.id, r.resursa_nume || "Resursă")}
-                                  className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1"
+                                  onClick={() => {
+                                    setReturnModalReservation(r)
+                                    setReturnCondition("DISPONIBILA")
+                                    setReturnNotes("")
+                                  }}
+                                  className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1 shadow-sm"
                                 >
                                   <Check className="h-3.5 w-3.5" />
                                   Confirmă Retur
@@ -441,6 +459,88 @@ export function ReservationsPage() {
             </div>
           )}
         </div>
+
+        {/* Modal Înregistrare Retur Echipament (FR-09) */}
+        {returnModalReservation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-neutral-200 overflow-hidden">
+              <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
+                <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-neutral-800" />
+                  Înregistrare Predare / Retur Fizic
+                </h3>
+                <button
+                  onClick={() => setReturnModalReservation(null)}
+                  className="text-neutral-400 hover:text-neutral-600 text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmReturn} className="p-6 space-y-4">
+                <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs space-y-1">
+                  <div>
+                    <span className="font-semibold text-neutral-700">Echipament: </span>
+                    <span className="text-neutral-900 font-medium">
+                      {returnModalReservation.resursa_nume}
+                    </span>{" "}
+                    ({returnModalReservation.resursa_cod})
+                  </div>
+                  <div>
+                    <span className="font-semibold text-neutral-700">Utilizator: </span>
+                    <span className="text-neutral-900">{returnModalReservation.utilizator_nume}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
+                    Stare echipament la returnare (FR-09)
+                  </label>
+                  <select
+                    value={returnCondition}
+                    onChange={(e) => setReturnCondition(e.target.value as any)}
+                    className="w-full h-9 rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-black"
+                  >
+                    <option value="DISPONIBILA">Funcțional / Conform (Disponibil imediat)</option>
+                    <option value="IN_MENTENANTA">Necesită verificare / Mentenanță</option>
+                    <option value="DEFECTA">Defect / Deteriorat în utilizare</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-800 mb-1">
+                    Observații tehnice (opțional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Consemnați starea la primire sau eventualele defecțiuni..."
+                    value={returnNotes}
+                    onChange={(e) => setReturnNotes(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-neutral-200 p-2.5 focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setReturnModalReservation(null)}
+                    className="text-xs"
+                  >
+                    Anulează
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingReturn}
+                    className="bg-black hover:bg-neutral-800 text-white text-xs"
+                  >
+                    {isSubmittingReturn ? "Se înregistrează..." : "Confirmă Returul"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Modal Respingere Rezervare */}
         {rejectModalReservation && (
