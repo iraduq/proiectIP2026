@@ -139,18 +139,34 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => fillTestAccount("student1@univ.ro")}
-                  className="p-2 rounded bg-neutral-50 border border-neutral-200 text-left hover:bg-neutral-100 font-medium"
+                  className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-left hover:bg-neutral-100 transition-colors"
                 >
-                  <div className="font-semibold text-neutral-900">Student</div>
-                  <div className="text-[10px] text-neutral-500">student1@univ.ro</div>
+                  <div className="font-semibold text-neutral-900 text-xs">Student</div>
+                  <div className="text-[10px] text-neutral-500 font-mono">student1@univ.ro</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillTestAccount("lab1@univ.ro")}
+                  className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-left hover:bg-neutral-100 transition-colors"
+                >
+                  <div className="font-semibold text-neutral-900 text-xs">Responsabil Lab</div>
+                  <div className="text-[10px] text-neutral-500 font-mono">lab1@univ.ro</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillTestAccount("prof1@univ.ro")}
+                  className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-left hover:bg-neutral-100 transition-colors"
+                >
+                  <div className="font-semibold text-neutral-900 text-xs">Profesor</div>
+                  <div className="text-[10px] text-neutral-500 font-mono">prof1@univ.ro</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => fillTestAccount("admin1@univ.ro")}
-                  className="p-2 rounded bg-neutral-50 border border-neutral-200 text-left hover:bg-neutral-100 font-medium"
+                  className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-left hover:bg-neutral-100 transition-colors"
                 >
-                  <div className="font-semibold text-neutral-900">Admin</div>
-                  <div className="text-[10px] text-neutral-500">admin1@univ.ro</div>
+                  <div className="font-semibold text-neutral-900 text-xs">Administrator</div>
+                  <div className="text-[10px] text-neutral-500 font-mono">admin1@univ.ro</div>
                 </button>
               </div>
             </div>
