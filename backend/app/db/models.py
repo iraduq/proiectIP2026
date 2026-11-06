@@ -178,3 +178,73 @@ class Room(TimestampMixin, Base):
 
     department = relationship("Department", back_populates="rooms")
     responsabil = relationship("User", foreign_keys=[responsabil_id])
+    resources = relationship("Resource", back_populates="room")
+
+
+class Category(TimestampMixin, Base):
+    __tablename__ = "categorii_resurse"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nume = Column(String(100), nullable=False, unique=True, index=True)
+    descriere = Column(String(500), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    resources = relationship("Resource", back_populates="category")
+
+
+class Resource(TimestampMixin, Base):
+    __tablename__ = "resurse"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nume = Column(String(255), nullable=False, index=True)
+    cod_inventar = Column(String(50), nullable=False, unique=True, index=True)
+    descriere = Column(String(500), nullable=True)
+    categorie_id = Column(Integer, ForeignKey("categorii_resurse.id", ondelete="RESTRICT"), nullable=False, index=True)
+    sala_id = Column(Integer, ForeignKey("sali.id", ondelete="RESTRICT"), nullable=False, index=True)
+    stare_tehnica = Column(
+        SAEnum(StareTehnica, name="stare_tehnica_enum"), default=StareTehnica.DISPONIBILA, nullable=False
+    )
+    specificatii = Column(String(1000), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    category = relationship("Category", back_populates="resources", lazy="joined")
+    room = relationship("Room", back_populates="resources", lazy="joined")
+    reservations = relationship("Reservation", back_populates="resource", cascade="all, delete-orphan")
+    technical_history = relationship("TechnicalHistory", back_populates="resource", cascade="all, delete-orphan")
+
+
+class Reservation(TimestampMixin, Base):
+    __tablename__ = "rezervari"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    resursa_id = Column(Integer, ForeignKey("resurse.id", ondelete="CASCADE"), nullable=False, index=True)
+    utilizator_id = Column(Integer, ForeignKey("utilizatori.id_utilizator", ondelete="CASCADE"), nullable=False, index=True)
+    data_inceput = Column(DateTime(timezone=True), nullable=False, index=True)
+    data_sfarsit = Column(DateTime(timezone=True), nullable=False, index=True)
+    stare = Column(
+        SAEnum(StareRezervare, name="stare_rezervare_enum"),
+        default=StareRezervare.IN_ASTEPTARE,
+        nullable=False,
+        index=True,
+    )
+    scop = Column(String(500), nullable=False)
+    motiv_respingere = Column(String(500), nullable=True)
+
+    resource = relationship("Resource", back_populates="reservations", lazy="joined")
+    user = relationship("User", lazy="joined")
+
+
+class TechnicalHistory(Base):
+    __tablename__ = "jurnal_tehnic"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    resursa_id = Column(Integer, ForeignKey("resurse.id", ondelete="CASCADE"), nullable=False, index=True)
+    utilizator_id = Column(Integer, ForeignKey("utilizatori.id_utilizator", ondelete="RESTRICT"), nullable=False, index=True)
+    tip_interventie = Column(String(100), nullable=False)
+    descriere = Column(String(1000), nullable=False)
+    stare_anterioara = Column(SAEnum(StareTehnica, name="stare_tehnica_enum"), nullable=False)
+    stare_noua = Column(SAEnum(StareTehnica, name="stare_tehnica_enum"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+
+    resource = relationship("Resource", back_populates="technical_history", lazy="joined")
+    user = relationship("User", lazy="joined")
