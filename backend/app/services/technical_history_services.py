@@ -5,7 +5,7 @@ from app.api.schemas.resources import (
     TechnicalHistoryCreate,
     TechnicalHistoryResponse,
 )
-from app.db.models import TechnicalHistory, User
+from app.db.models import StareTehnica, TechnicalHistory, User
 from app.exceptions.exceptions import (
     ResourceNotFoundError,
     TechnicalHistoryNotFoundError,
@@ -81,6 +81,19 @@ class TechnicalHistoryService:
             stare_noua=stare_noua,
         )
         await technical_history_repository.add(db, history_entry)
+
+        if stare_noua in [StareTehnica.DEFECTA, StareTehnica.IN_MENTENANTA]:
+            from app.db.models import Reservation, StareRezervare
+            from sqlalchemy import select
+            pending_query = select(Reservation).where(
+                Reservation.resursa_id == data.resursa_id,
+                Reservation.stare == StareRezervare.IN_ASTEPTARE,
+            )
+            pending_items = (await db.execute(pending_query)).scalars().all()
+            for pres in pending_items:
+                pres.stare = StareRezervare.RESPINSA
+                pres.motiv_respingere = f"Resursa a devenit indisponibila: {stare_noua.value}."
+
         await db.commit()
 
         detailed = await technical_history_repository.get_detailed(db, history_entry.id)

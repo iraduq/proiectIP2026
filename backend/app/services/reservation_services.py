@@ -260,5 +260,51 @@ class ReservationService:
         detailed = await reservation_repository.get_detailed(db, reservation.id)
         return self._to_response(detailed or reservation)
 
+    async def return_reservation(
+        self,
+        db: AsyncSession,
+        actor: User,
+        reservation_id: int,
+        stare_echipament: Optional[StareTehnica] = None,
+        observatii: Optional[str] = None,
+    ) -> ReservationResponse:
+        reservation = await self.get_by_id(db, reservation_id)
+        current_state = reservation.stare
+
+        is_staff = actor.role_rel.name in [
+            UserRole.ADMINISTRATOR.value,
+            UserRole.PROFESOR.value,
+            UserRole.RESPONSABIL_LABORATOR.value,
+        ]
+        if not is_staff:
+            raise UnauthorizedAccessError("Doar personalul didactic sau administratorul poate finaliza rezervări.")
+        if current_state != StareRezervare.APROBATA:
+            raise ReservationStateTransitionError(current_state.value, StareRezervare.FINALIZATA.value)
+
+        reservation.stare = StareRezervare.FINALIZATA
+
+        if stare_echipament and reservation.resource:
+            resource = reservation.resource
+            stare_veche = resource.stare_tehnica
+            resource.stare_tehnica = stare_echipament
+
+            if stare_echipament in [StareTehnica.DEFECTA, StareTehnica.IN_MENTENANTA]:
+                from app.db.models import TechnicalHistory
+                from app.repositories.technical_history_repository import TechnicalHistoryRepository
+                tech_repo = TechnicalHistoryRepository()
+                th = TechnicalHistory(
+                    resursa_id=resource.id,
+                    utilizator_id=actor.id_utilizator,
+                    tip_interventie="RETUR_DEFECTIUNE" if stare_echipament == StareTehnica.DEFECTA else "RETUR_MENTENANTA",
+                    descriere=observatii.strip() if observatii else f"Echipament returnat in stare de {stare_echipament.value}.",
+                    stare_anterioara=stare_veche,
+                    stare_noua=stare_echipament,
+                )
+                await tech_repo.add(db, th)
+
+        await db.commit()
+        detailed = await reservation_repository.get_detailed(db, reservation.id)
+        return self._to_response(detailed or reservation)
+
 
 reservation_service = ReservationService()

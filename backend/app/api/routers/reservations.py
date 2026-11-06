@@ -9,7 +9,7 @@ from app.api.schemas.resources import (
     StudentQuotaResponse,
 )
 from app.db.database import get_db
-from app.db.models import StareRezervare, User
+from app.db.models import StareRezervare, StareTehnica, User
 from app.dependencies.auth import get_current_user, require_permission
 from app.services.reservation_services import reservation_service
 from app.utils.roles import PermissionCode
@@ -115,9 +115,15 @@ async def reject_reservation(
 @router.post("/{reservation_id}/return", response_model=ReservationResponse)
 async def return_reservation(
     reservation_id: int,
+    stare_echipament: Optional[StareTehnica] = Query(default=None),
+    observatii: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(PermissionCode.BOOKINGS_RETURN)),
 ) -> ReservationResponse:
-    return await reservation_service.update_status(
-        db, current_user, reservation_id, ReservationStatusUpdate(stare=StareRezervare.FINALIZATA)
+    return await reservation_service.return_reservation(
+        db,
+        current_user,
+        reservation_id,
+        stare_echipament=stare_echipament,
+        observatii=observatii,
     )
