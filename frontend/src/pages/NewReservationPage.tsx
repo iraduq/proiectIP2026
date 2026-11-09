@@ -276,16 +276,16 @@ export function NewReservationPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start pt-2">
           <div className="lg:col-span-7 space-y-6">
-            <div className="flex items-center gap-4 border-b border-neutral-200 pb-6">
-              <div className="h-20 w-24 rounded-xl bg-white border border-neutral-200 overflow-hidden shrink-0 flex items-center justify-center p-1.5">
+            <div className="flex items-center gap-6 border-b border-neutral-200 pb-6">
+              <div className="h-40 w-56 rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-neutral-100 border border-neutral-200">
                 <img
                   src={displayImage}
                   alt={displayTitle}
-                  className="w-full h-full object-cover rounded-lg"
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <div className="space-y-1 min-w-0 flex-1">
-                <h2 className="text-base font-bold text-neutral-900 leading-snug">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <h2 className="text-lg font-bold text-neutral-900 leading-snug">
                   {displayTitle}
                 </h2>
                 <p className="text-xs text-neutral-500">{displaySpecs}</p>

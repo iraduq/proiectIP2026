@@ -244,12 +244,12 @@ export function ProfessorDashboardPage() {
                   onClick={() => navigate(`/resources/${r.id}`)}
                   className="p-3 bg-white hover:bg-neutral-50/80 rounded-xl transition-colors cursor-pointer flex items-center gap-4"
                 >
-                  <div className="h-14 w-14 rounded-lg bg-neutral-900/5 border border-neutral-200 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                  <div className="h-20 w-32 rounded-lg bg-neutral-900/5 border border-neutral-200 overflow-hidden shrink-0 flex items-center justify-center">
                     {r.imagine_url ? (
                       <img
                         src={r.imagine_url}
                         alt={r.nume}
-                        className="w-full h-full object-cover rounded-md"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="text-neutral-400 font-bold text-xs">RRM</div>
