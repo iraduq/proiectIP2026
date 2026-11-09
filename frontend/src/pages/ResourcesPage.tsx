@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
-import type { StareTehnica } from "../types"
+import { ALL_CATALOG_ITEMS, type CatalogCardItem } from "../data/catalogItems"
 import {
   Search,
   SlidersHorizontal,
@@ -16,124 +16,36 @@ import { Input } from "../components/ui/input"
 import { Badge } from "../components/ui/badge"
 import { Card } from "../components/ui/card"
 
-interface CatalogCardItem {
-  id: number
-  code: string
-  name: string
-  specsAndRoom: string
-  categoryTag: string
-  department: string
-  statusBadge: "Disponibil" | "Rezervat" | "În utilizare"
-  stareTehnica: StareTehnica
-  returnTodayBadge?: string
-  availabilityNote?: string
-  buttonLabel: string
-  imageUrl: string
-  targetPath: string
-}
-
-const CATALOG_ITEMS: CatalogCardItem[] = [
-  {
-    id: 1,
-    code: "INV-USV-2026-014",
-    name: "Workstation AI Deep Learning",
-    specsAndRoom: "RTX 4090 · 64GB RAM · Lab 204",
-    categoryTag: "Calculatoare",
-    department: "Calculatoare",
-    statusBadge: "Disponibil",
-    stareTehnica: "DISPONIBILA",
-    buttonLabel: "Rezervă resursa",
-    imageUrl: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/resources/1",
-  },
-  {
-    id: 2,
-    code: "INV-USV-2026-088",
-    name: "Braț Robotic Niryo Ned 2",
-    specsAndRoom: "6 axe · ROS2 · Lab 208",
-    categoryTag: "Roboți",
-    department: "Calculatoare",
-    statusBadge: "Rezervat",
-    stareTehnica: "DISPONIBILA",
-    availabilityNote: "Disponibil: 23.10.2026 · 10:00–12:00",
-    buttonLabel: "Rezervă resursa",
-    imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/resources/2",
-  },
-  {
-    id: 3,
-    code: "INV-USV-2026-102",
-    name: "Kit NVIDIA Jetson Orin Nano",
-    specsAndRoom: "40 TOPS · Dev Kit · Lab 210",
-    categoryTag: "Kituri IoT",
-    department: "Calculatoare",
-    statusBadge: "În utilizare",
-    stareTehnica: "DISPONIBILA",
-    returnTodayBadge: "Returnare azi 16:00",
-    availabilityNote: "Preluat: 22.10.2026 · 10:00–16:00",
-    buttonLabel: "Verifică disponibilitatea",
-    imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/resources/3",
-  },
-  {
-    id: 4,
-    code: "INV-USV-2026-215",
-    name: "Osciloscop Rohde & Schwarz RTB2004",
-    specsAndRoom: "300 MHz · 2.5 GSa/s · Lab 105",
-    categoryTag: "Instrumente",
-    department: "Electronică",
-    statusBadge: "Disponibil",
-    stareTehnica: "DISPONIBILA",
-    buttonLabel: "Rezervă resursa",
-    imageUrl: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/resources/4",
-  },
-  {
-    id: 5,
-    code: "INV-USV-2026-041",
-    name: "Imprimantă 3D Bambu Lab X1-Carbon AMS",
-    specsAndRoom: "Multi-filament AMS · Lab Prototipare",
-    categoryTag: "Prototipare",
-    department: "Automatică",
-    statusBadge: "Disponibil",
-    stareTehnica: "DISPONIBILA",
-    buttonLabel: "Rezervă resursa",
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/resources/5",
-  },
-]
+const PAGE_SIZE = 12
 
 export function ResourcesPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [items, setItems] = useState<CatalogCardItem[]>(CATALOG_ITEMS)
+  const [items, setItems] = useState<CatalogCardItem[]>(ALL_CATALOG_ITEMS)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("toate")
   const [deptFilter, setDeptFilter] = useState("toate")
   const [statusFilter, setStatusFilter] = useState("toate")
   const [maxDuration, setMaxDuration] = useState(4)
   const [sortBy, setSortBy] = useState("Disponibilitate")
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     resourcesApi
-      .getResources({ limit: 50 })
+      .getResources({ limit: 200 })
       .then((res) => {
         if (res.items && res.items.length > 0) {
           setItems((prev) =>
             prev.map((card, idx) => {
               const matched =
-                res.items.find(
-                  (dbItem) =>
-                    dbItem.cod_inventar === card.code ||
-                    dbItem.nume.toLowerCase().includes(card.name.split(" ")[0].toLowerCase())
-                ) || res.items[idx]
+                res.items.find((dbItem) => dbItem.cod_inventar === card.code) ||
+                res.items[idx % res.items.length]
               if (!matched) return card
               return {
                 ...card,
                 id: matched.id,
-                stareTehnica: matched.stare_tehnica,
-                targetPath: `/resources/${matched.id}`,
+                stareTehnica: card.stareTehnica !== "DISPONIBILA" ? card.stareTehnica : matched.stare_tehnica,
               }
             })
           )
@@ -148,6 +60,7 @@ export function ResourcesPage() {
     setDeptFilter("toate")
     setStatusFilter("toate")
     setMaxDuration(4)
+    setCurrentPage(1)
   }
 
   const isStudent = !user || user.rol === "STUDENT"
@@ -162,7 +75,8 @@ export function ResourcesPage() {
         q &&
         !item.name.toLowerCase().includes(q) &&
         !item.code.toLowerCase().includes(q) &&
-        !item.specsAndRoom.toLowerCase().includes(q)
+        !item.specsAndRoom.toLowerCase().includes(q) &&
+        !item.categoryTag.toLowerCase().includes(q)
       ) {
         return false
       }
@@ -182,6 +96,12 @@ export function ResourcesPage() {
       if (sortBy === "Categorie") return a.categoryTag.localeCompare(b.categoryTag)
       return a.id - b.id
     })
+
+  const totalItems = filteredItems.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+  const startIndex = (safePage - 1) * PAGE_SIZE
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + PAGE_SIZE)
 
   const availableCount = filteredItems.filter((i) => i.statusBadge === "Disponibil").length
   const inUseCount = filteredItems.filter((i) => i.statusBadge === "În utilizare").length
@@ -216,7 +136,10 @@ export function ResourcesPage() {
               type="text"
               placeholder="Caută după nume sau cod resursă..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setCurrentPage(1)
+              }}
               className="pl-9 h-9 rounded-xl border-neutral-200 bg-neutral-50/40 text-xs"
             />
           </div>
@@ -230,7 +153,10 @@ export function ResourcesPage() {
 
               <select
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="h-7 rounded-full border border-neutral-200 bg-white px-3 text-[11px] font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-neutral-900"
               >
                 <option value="toate">Tip: toate</option>
@@ -239,11 +165,19 @@ export function ResourcesPage() {
                 <option value="Kituri IoT">Tip: Kituri IoT</option>
                 <option value="Instrumente">Tip: Instrumente</option>
                 <option value="Prototipare">Tip: Prototipare</option>
+                <option value="Drone & Vehicule">Tip: Drone & Vehicule</option>
+                <option value="Rețelistică & Cyber">Tip: Rețelistică & Cyber</option>
+                <option value="Optoelectronică">Tip: Optoelectronică</option>
+                <option value="Biomed & VR">Tip: Biomed & VR</option>
+                <option value="Energetică & PLC">Tip: Energetică & PLC</option>
               </select>
 
               <select
                 value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
+                onChange={(e) => {
+                  setDeptFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="h-7 rounded-full border border-neutral-200 bg-white px-3 text-[11px] font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-neutral-900"
               >
                 <option value="toate">Departament: toate</option>
@@ -254,7 +188,10 @@ export function ResourcesPage() {
 
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
                 className="h-7 rounded-full border border-neutral-200 bg-white px-3 text-[11px] font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-neutral-900"
               >
                 <option value="toate">Stare: toate</option>
@@ -314,52 +251,53 @@ export function ResourcesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredItems.map((item) => (
+          {paginatedItems.map((item) => (
             <Card
-              key={item.id}
+              key={`${item.code}-${item.id}`}
               className="rounded-2xl border-neutral-200 bg-white overflow-hidden shadow-none flex flex-col justify-between"
             >
               <div>
-                <div className="p-3 pb-0">
-                  <div className="h-40 w-full rounded-xl overflow-hidden bg-neutral-100 border border-neutral-100">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                <div className="h-44 w-full bg-neutral-100 overflow-hidden">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
                 <div className="p-4 space-y-2.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] text-neutral-400 font-mono">
                       {item.code}
                     </span>
+
                     {item.statusBadge === "În utilizare" ? (
                       <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
-                        {item.statusBadge}
+                        În utilizare
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
-                        className="rounded-full border-neutral-200 bg-neutral-50 text-neutral-800 text-[10px] font-semibold px-2.5 py-0.5"
+                        className="rounded-full bg-neutral-50 border-neutral-200 text-neutral-800 text-[10px] font-semibold px-2.5 py-0.5"
                       >
                         {item.statusBadge}
                       </Badge>
                     )}
                   </div>
 
-                  <div className="space-y-0.5">
+                  <div>
                     <h3 className="text-sm font-bold text-neutral-900 leading-snug">
                       {item.name}
                     </h3>
-                    <p className="text-xs text-neutral-500">{item.specsAndRoom}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {item.specsAndRoom}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                     <Badge
                       variant="outline"
-                      className="rounded-md border-neutral-200 bg-neutral-100/80 text-neutral-700 text-[10px] font-semibold px-2 py-0.5"
+                      className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-800 text-[10px] font-semibold px-2.5 py-0.5"
                     >
                       {item.categoryTag}
                     </Badge>
@@ -367,9 +305,9 @@ export function ResourcesPage() {
                     {item.returnTodayBadge && (
                       <Badge
                         variant="outline"
-                        className="rounded-md border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1"
+                        className="rounded-full bg-amber-50 border-amber-200 text-amber-800 text-[10px] font-semibold px-2.5 py-0.5 gap-1"
                       >
-                        <AlertTriangle className="h-3 w-3 text-amber-600" />
+                        <AlertTriangle className="h-2.5 w-2.5 text-amber-600" />
                         {item.returnTodayBadge}
                       </Badge>
                     )}
@@ -377,7 +315,7 @@ export function ResourcesPage() {
 
                   {item.availabilityNote && (
                     <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
-                      <Calendar className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                      <Calendar className="h-3 w-3 text-neutral-400 shrink-0" />
                       <span>{item.availabilityNote}</span>
                     </div>
                   )}
@@ -387,8 +325,8 @@ export function ResourcesPage() {
               <div className="px-4 pb-4 pt-1">
                 <Button
                   variant="outline"
-                  onClick={() => navigate(item.targetPath)}
-                  className="w-full h-8 rounded-lg border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold"
+                  onClick={() => navigate(`/resources/${item.id}`)}
+                  className="w-full h-9 rounded-xl border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold"
                 >
                   {item.buttonLabel}
                 </Button>
@@ -397,29 +335,52 @@ export function ResourcesPage() {
           ))}
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs text-neutral-500">
-            Se afișează 1–{filteredItems.length} din {filteredItems.length} resurse
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 pb-6 text-xs text-neutral-500">
+          <span>
+            Se afișează {totalItems === 0 ? 0 : startIndex + 1}–
+            {Math.min(startIndex + PAGE_SIZE, totalItems)} din {totalItems} resurse
           </span>
 
           <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-lg border-neutral-200 bg-white text-neutral-600 text-xs px-3"
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="h-8 px-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-40 transition-colors"
             >
               Anterior
-            </Button>
-            <span className="h-8 w-8 rounded-lg bg-neutral-950 text-white text-xs font-bold flex items-center justify-center">
-              1
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-lg border-neutral-200 bg-white text-neutral-600 text-xs px-3"
+            </button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+              .filter(
+                (page) =>
+                  page === 1 ||
+                  page === totalPages ||
+                  Math.abs(page - safePage) <= 2
+              )
+              .map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`h-8 w-8 rounded-lg font-bold flex items-center justify-center transition-colors ${
+                    page === safePage
+                      ? "bg-neutral-950 text-white"
+                      : "border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+            <button
+              type="button"
+              disabled={safePage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="h-8 px-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-40 transition-colors"
             >
               Următor
-            </Button>
+            </button>
           </div>
         </div>
       </div>

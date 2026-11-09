@@ -19,97 +19,7 @@ import { Badge } from "../components/ui/badge"
 import { Card } from "../components/ui/card"
 import { Textarea } from "../components/ui/textarea"
 import { QuotaLimitModal } from "../components/modals/QuotaLimitModal"
-
-interface FallbackDetail {
-  id: number
-  nume: string
-  categorie_nume: string
-  stare_label: string
-  sala_cod: string
-  specializare: string
-  departament: string
-  cod_inventar: string
-  imagine_url: string
-  specs: { label: string; value: string }[]
-}
-
-const FALLBACK_DETAILS: Record<string, FallbackDetail> = {
-  "1": {
-    id: 1,
-    nume: "Workstation AI Deep Learning",
-    categorie_nume: "Calculatoare",
-    stare_label: "Disponibil",
-    sala_cod: "Lab 204",
-    specializare: "Inteligență Artificială",
-    departament: "Calculatoare",
-    cod_inventar: "INV-USV-2026-014",
-    imagine_url: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=900&q=80",
-    specs: [
-      { label: "GPU", value: "NVIDIA RTX 4090" },
-      { label: "RAM", value: "64 GB" },
-    ],
-  },
-  "2": {
-    id: 2,
-    nume: "Braț Robotic Educațional Niryo Ned 2",
-    categorie_nume: "Roboți",
-    stare_label: "Disponibil",
-    sala_cod: "Lab 208",
-    specializare: "Inteligență Artificială",
-    departament: "Calculatoare",
-    cod_inventar: "INV-USV-2026-088",
-    imagine_url: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=900&q=80",
-    specs: [
-      { label: "Axe", value: "6 axe" },
-      { label: "Framework", value: "ROS2" },
-    ],
-  },
-  "3": {
-    id: 3,
-    nume: "Kit NVIDIA Jetson Orin Nano Dev Kit",
-    categorie_nume: "Kituri IoT",
-    stare_label: "Disponibil",
-    sala_cod: "Lab 210",
-    specializare: "Inteligență Artificială",
-    departament: "Calculatoare",
-    cod_inventar: "INV-USV-2026-102",
-    imagine_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
-    specs: [
-      { label: "Performanță AI", value: "40 TOPS" },
-      { label: "Format", value: "Dev Kit" },
-    ],
-  },
-  "4": {
-    id: 4,
-    nume: "Osciloscop Digital Rohde & Schwarz RTB2004",
-    categorie_nume: "Instrumente",
-    stare_label: "Disponibil",
-    sala_cod: "Lab 105",
-    specializare: "Electronică Aplicată",
-    departament: "Electronică",
-    cod_inventar: "INV-USV-2026-215",
-    imagine_url: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=900&q=80",
-    specs: [
-      { label: "Lățime bandă", value: "300 MHz" },
-      { label: "Eșantionare", value: "2.5 GSa/s" },
-    ],
-  },
-  "5": {
-    id: 5,
-    nume: "Imprimantă 3D Bambu Lab X1-Carbon AMS",
-    categorie_nume: "Prototipare",
-    stare_label: "Disponibil",
-    sala_cod: "Lab Prototipare",
-    specializare: "Automatică și Informatică",
-    departament: "Automatică",
-    cod_inventar: "INV-USV-2026-041",
-    imagine_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
-    specs: [
-      { label: "Tehnologie", value: "Multi-filament AMS" },
-      { label: "Volum", value: "256 × 256 × 256 mm" },
-    ],
-  },
-}
+import { getCatalogItemByIdOrCode } from "../data/catalogItems"
 
 interface DayColumn {
   isoDate: string
@@ -133,7 +43,19 @@ export function ResourceDetailPage() {
   const { user } = useAuth()
 
   const resKey = id || "1"
-  const fallback = FALLBACK_DETAILS[resKey] || FALLBACK_DETAILS["1"]
+  const catalogMatch = getCatalogItemByIdOrCode(resKey)
+  const fallback = {
+    id: catalogMatch.id,
+    nume: catalogMatch.name,
+    categorie_nume: catalogMatch.categoryTag,
+    stare_label: catalogMatch.statusBadge,
+    sala_cod: catalogMatch.roomLabel,
+    specializare: catalogMatch.specializare,
+    departament: catalogMatch.department,
+    cod_inventar: catalogMatch.code,
+    imagine_url: catalogMatch.imageUrl,
+    specs: catalogMatch.specs,
+  }
 
   const [resource, setResource] = useState<Resource | null>(null)
   const [quota, setQuota] = useState<StudentQuota>({
