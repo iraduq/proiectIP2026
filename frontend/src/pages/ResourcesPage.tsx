@@ -206,7 +206,7 @@ export function ResourcesPage() {
           </div>
 
           <Button
-            onClick={() => navigate("/reservations/new")}
+            onClick={() => navigate("/resources/1")}
             className="bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold h-9 px-4 rounded-lg gap-1.5 shrink-0"
           >
             <Plus className="h-3.5 w-3.5" />
