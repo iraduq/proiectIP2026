@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas.resources import (
     PaginatedResponse,
+    ResourceAvailabilityResponse,
     ResourceCreate,
     ResourceResponse,
     ResourceUpdate,
@@ -55,6 +56,19 @@ async def get_resource(
 ) -> ResourceResponse:
     res = await resource_service.get_by_id(db, resource_id, actor=current_user)
     return resource_service._to_response(res)
+
+
+@router.get("/{resource_id}/availability", response_model=ResourceAvailabilityResponse)
+async def get_resource_availability(
+    resource_id: int,
+    start_date: Optional[str] = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    days_count: int = Query(default=5, ge=1, le=14),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(PermissionCode.RESOURCES_READ)),
+) -> ResourceAvailabilityResponse:
+    return await resource_service.get_availability(
+        db, resource_id=resource_id, start_date=start_date, days_count=days_count
+    )
 
 
 @router.post("", response_model=ResourceResponse, status_code=status.HTTP_201_CREATED)

@@ -261,3 +261,25 @@ async def test_technical_history_and_state_transition(client: AsyncClient, db_se
     res_check = await client.get(f"/api/resources/{res_item.id}", headers=lab_headers)
     assert res_check.status_code == 200
     assert res_check.json()["stare_tehnica"] == "DEFECTA"
+
+
+@pytest.mark.asyncio
+async def test_resource_availability_endpoint(client: AsyncClient, db_session: AsyncSession) -> None:
+    await seed_all(db_session)
+    student_token = await get_auth_token(client, "student1@univ.ro")
+    headers = {"Authorization": f"Bearer {student_token}"}
+
+    res_item = (
+        await db_session.execute(
+            select(Resource).where(Resource.cod_inventar == "HPC-RTX-4090-01")
+        )
+    ).scalars().first()
+    assert res_item is not None
+
+    res_avail = await client.get(f"/api/resources/{res_item.id}/availability", headers=headers)
+    assert res_avail.status_code == 200
+    data = res_avail.json()
+    assert data["resursa_id"] == res_item.id
+    assert len(data["zile"]) == 5
+    assert len(data["zile"][0]["slots"]) == 10
+    assert data["zile"][0]["slots"][0]["status"] in ["LIBER", "OCUPAT", "MENTENANTA"]

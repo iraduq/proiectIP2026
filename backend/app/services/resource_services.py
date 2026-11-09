@@ -1,7 +1,10 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas.resources import (
+    DayAvailability,
+    HourlySlot,
     PaginatedResponse,
+    ResourceAvailabilityResponse,
     ResourceCreate,
     ResourceResponse,
     ResourceUpdate,
@@ -245,9 +248,71 @@ class ResourceService:
 
     async def delete(self, db: AsyncSession, actor: User, resource_id: int) -> None:
         res = await self.get_by_id(db, resource_id)
-        # Soft-delete resource to preserve reservation and technical history integrity
         res.is_active = False
         await db.commit()
+
+    async def get_availability(
+        self,
+        db: AsyncSession,
+        resource_id: int,
+        start_date: Optional[str] = None,
+        days_count: int = 5,
+    ) -> ResourceAvailabilityResponse:
+        res = await self.get_by_id(db, resource_id)
+        from datetime import datetime, date, time, timedelta, timezone
+        from sqlalchemy import select
+        from app.db.models import Reservation, StareRezervare
+
+        if start_date:
+            base_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        else:
+            base_date = datetime.now(timezone.utc).date()
+
+        ro_days = ["Luni", "Marți", "Miercuri", "Joi", "Vineri", "Sâmbătă", "Duminică"]
+        hours = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
+
+        window_start = datetime.combine(base_date, time(0, 0), tzinfo=timezone.utc)
+        window_end = datetime.combine(base_date + timedelta(days=days_count), time(23, 59), tzinfo=timezone.utc)
+
+        stmt = select(Reservation).where(
+            Reservation.resursa_id == resource_id,
+            Reservation.stare.in_([StareRezervare.IN_ASTEPTARE, StareRezervare.APROBATA]),
+            Reservation.data_inceput < window_end,
+            Reservation.data_sfarsit > window_start,
+        )
+        existing_res = (await db.execute(stmt)).scalars().all()
+
+        zile: list[DayAvailability] = []
+        for d in range(days_count):
+            cur_date = base_date + timedelta(days=d)
+            weekday_idx = cur_date.weekday()
+            zi_nume = ro_days[weekday_idx]
+
+            slots: list[HourlySlot] = []
+            for h in hours:
+                h_val = int(h.split(":")[0])
+                slot_start = datetime.combine(cur_date, time(h_val, 0), tzinfo=timezone.utc)
+                slot_end = datetime.combine(cur_date, time(h_val + 1, 0), tzinfo=timezone.utc)
+
+                status_slot = "LIBER"
+                matched_id = None
+
+                if res.stare_tehnica in [StareTehnica.DEFECTA, StareTehnica.IN_MENTENANTA]:
+                    status_slot = "MENTENANTA"
+                else:
+                    for er in existing_res:
+                        er_start = er.data_inceput if er.data_inceput.tzinfo else er.data_inceput.replace(tzinfo=timezone.utc)
+                        er_end = er.data_sfarsit if er.data_sfarsit.tzinfo else er.data_sfarsit.replace(tzinfo=timezone.utc)
+                        if er_start < slot_end and er_end > slot_start:
+                            status_slot = "OCUPAT"
+                            matched_id = er.id
+                            break
+
+                slots.append(HourlySlot(ora=h, status=status_slot, rezervare_id=matched_id))
+
+            zile.append(DayAvailability(data=cur_date.isoformat(), zi_nume=zi_nume, slots=slots))
+
+        return ResourceAvailabilityResponse(resursa_id=res.id, stare_tehnica=res.stare_tehnica, zile=zile)
 
 
 resource_service = ResourceService()
