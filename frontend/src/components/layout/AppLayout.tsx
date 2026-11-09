@@ -96,22 +96,21 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
     user?.rol === "ADMINISTRATOR" ||
     user?.rol === "RESPONSABIL_LABORATOR" ||
     Boolean(user?.permissions?.includes("technical_history:read"))
-  const isProfessor = user?.rol === "PROFESOR"
+  const isLabOrProf = user?.rol === "RESPONSABIL_LABORATOR" || user?.rol === "PROFESOR"
 
-  const navItems = [
-    { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
-    ...(isProfessor
-      ? [
-          { label: "Panou didactic", path: "/professor", icon: GraduationCap },
-          { label: "Rezervări grupe", path: "/professor/group-booking", icon: Users },
-        ]
-      : []),
-    { label: "Resurse & Echipamente", path: "/resources", icon: Cpu },
-    { label: "Rezervări", path: "/reservations", icon: Calendar },
-    ...(canViewTechnical ? [{ label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench }] : []),
-    { label: "Săli de cercetare", path: "/rooms", icon: DoorOpen },
-    ...(isAdmin ? [{ label: "Structură Academică", path: "/admin/academic", icon: Building2 }] : []),
-  ]
+  const navItems = isLabOrProf
+    ? [
+        { label: "Panou departament", path: "/professor", icon: LayoutDashboard },
+        { label: "Aprobări studenți", path: "/professor/approvals", icon: Users },
+      ]
+    : [
+        { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
+        { label: "Resurse & Echipamente", path: "/resources", icon: Cpu },
+        { label: "Rezervări", path: "/reservations", icon: Calendar },
+        ...(canViewTechnical ? [{ label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench }] : []),
+        { label: "Săli de cercetare", path: "/rooms", icon: DoorOpen },
+        ...(isAdmin ? [{ label: "Structură Academică", path: "/admin/academic", icon: Building2 }] : []),
+      ]
 
   const totalResults =
     searchResults.rooms.length +
@@ -325,12 +324,20 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
           </button>
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-neutral-50 border border-neutral-100">
-            <div className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-xs shrink-0">
+            <div className="h-8 w-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
               {user?.nume ? user.nume.charAt(0).toUpperCase() : <GraduationCap className="h-4 w-4" />}
             </div>
             <div className="overflow-hidden">
               <div className="text-xs font-semibold text-neutral-900 truncate">{user?.nume || "Utilizator"}</div>
-              <div className="text-[10px] text-neutral-500 truncate">{user?.rol || "MEMBRU"}</div>
+              <div className="text-[10px] text-neutral-500 truncate">
+                {user?.rol === "RESPONSABIL_LABORATOR"
+                  ? "Reprezentant laborator"
+                  : user?.rol === "PROFESOR"
+                  ? "Profesor"
+                  : user?.rol === "ADMINISTRATOR"
+                  ? "Administrator"
+                  : "Student"}
+              </div>
             </div>
           </div>
 
@@ -358,10 +365,30 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
           </div>
 
           <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-2 text-neutral-500">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span>Sistem online</span>
-            </div>
+            {user ? (
+              <div className="flex items-center gap-2.5">
+                <div className="text-right">
+                  <div className="font-bold text-xs text-neutral-900 leading-tight">{user.nume}</div>
+                  <div className="text-[10px] text-neutral-500">
+                    {user.rol === "RESPONSABIL_LABORATOR"
+                      ? "Reprezentant laborator"
+                      : user.rol === "PROFESOR"
+                      ? "Profesor · Departamentul Calculatoare"
+                      : user.rol === "ADMINISTRATOR"
+                      ? "Administrator"
+                      : "Student"}
+                  </div>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  {user.nume.charAt(0).toUpperCase()}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-neutral-500">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span>Sistem online</span>
+              </div>
+            )}
           </div>
         </header>
 
