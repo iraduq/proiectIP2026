@@ -189,3 +189,21 @@ export interface TechnicalHistory {
   stare_noua: StareTehnica
   created_at: string
 }
+
+export interface HourlySlot {
+  ora: string
+  status: "LIBER" | "OCUPAT" | "MENTENANTA"
+  rezervare_id?: number | null
+}
+
+export interface DayAvailability {
+  data: string
+  zi_nume: string
+  slots: HourlySlot[]
+}
+
+export interface ResourceAvailability {
+  resursa_id: number
+  stare_tehnica: StareTehnica
+  zile: DayAvailability[]
+}
