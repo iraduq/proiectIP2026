@@ -44,7 +44,7 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
   },
   {
     id: 102,
-    studentName: "Marius Mitica",
+    studentName: "Mircea Marius",
     studentDetail: "Calculatoare · Anul IV",
     resourceName: "Braț Robotic Educațional Niryo Ned 2",
     inventoryCode: "INV-USV-2026-088",
@@ -58,7 +58,7 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
   },
   {
     id: 103,
-    studentName: "Gica Hagi",
+    studentName: "Stelica Vali",
     studentDetail: "AIA · Anul II",
     resourceName: "Osciloscop Digital Rohde & Schwarz RTB2004",
     inventoryCode: "INV-USV-2026-215",
