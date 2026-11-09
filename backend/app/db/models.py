@@ -205,6 +205,7 @@ class Resource(TimestampMixin, Base):
         SAEnum(StareTehnica, name="stare_tehnica_enum"), default=StareTehnica.DISPONIBILA, nullable=False
     )
     specificatii = Column(String(1000), nullable=True)
+    imagine_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
     category = relationship("Category", back_populates="resources", lazy="joined")
