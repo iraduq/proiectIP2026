@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
+import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
+import type { StareTehnica } from "../types"
 import {
   Search,
   SlidersHorizontal,
   Plus,
-  Info,
   AlertTriangle,
   Calendar,
 } from "lucide-react"
@@ -22,12 +23,10 @@ interface CatalogCardItem {
   specsAndRoom: string
   categoryTag: string
   department: string
-  specialization: string
-  statusBadge: "Disponibil" | "Rezervat" | "În utilizare" | "Restricționat"
-  accessType: "AIA" | "RETURN_TODAY" | "RESTRICTED"
-  accessLabel: string
+  statusBadge: "Disponibil" | "Rezervat" | "În utilizare"
+  stareTehnica: StareTehnica
+  returnTodayBadge?: string
   availabilityNote?: string
-  restrictedBanner?: string
   buttonLabel: string
   imageUrl: string
   targetPath: string
@@ -41,10 +40,8 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     specsAndRoom: "RTX 4090 · 64GB RAM · Lab 204",
     categoryTag: "Calculatoare",
     department: "Calculatoare",
-    specialization: "AIA",
     statusBadge: "Disponibil",
-    accessType: "AIA",
-    accessLabel: "Acces AIA",
+    stareTehnica: "DISPONIBILA",
     buttonLabel: "Rezervă resursa",
     imageUrl: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=900&q=80",
     targetPath: "/resources/1",
@@ -56,10 +53,8 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     specsAndRoom: "6 axe · ROS2 · Lab 208",
     categoryTag: "Roboți",
     department: "Calculatoare",
-    specialization: "AIA",
     statusBadge: "Rezervat",
-    accessType: "AIA",
-    accessLabel: "Acces AIA",
+    stareTehnica: "DISPONIBILA",
     availabilityNote: "Disponibil: 23.10.2026 · 10:00–12:00",
     buttonLabel: "Rezervă resursa",
     imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=900&q=80",
@@ -72,10 +67,9 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     specsAndRoom: "40 TOPS · Dev Kit · Lab 210",
     categoryTag: "Kituri IoT",
     department: "Calculatoare",
-    specialization: "AIA",
     statusBadge: "În utilizare",
-    accessType: "RETURN_TODAY",
-    accessLabel: "Returnare azi 16:00",
+    stareTehnica: "DISPONIBILA",
+    returnTodayBadge: "Returnare azi 16:00",
     availabilityNote: "Preluat: 22.10.2026 · 10:00–16:00",
     buttonLabel: "Verifică disponibilitatea",
     imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
@@ -88,12 +82,9 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     specsAndRoom: "300 MHz · 2.5 GSa/s · Lab 105",
     categoryTag: "Instrumente",
     department: "Electronică",
-    specialization: "Non-AIA",
-    statusBadge: "Restricționat",
-    accessType: "RESTRICTED",
-    accessLabel: "Nu AIA",
-    restrictedBanner: "Restricționat · Necesită aprobare cadru didactic",
-    buttonLabel: "Cere aprobare CD",
+    statusBadge: "Disponibil",
+    stareTehnica: "DISPONIBILA",
+    buttonLabel: "Rezervă resursa",
     imageUrl: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=900&q=80",
     targetPath: "/resources/4",
   },
@@ -104,12 +95,9 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     specsAndRoom: "Multi-filament AMS · Lab Prototipare",
     categoryTag: "Prototipare",
     department: "Automatică",
-    specialization: "Non-AIA",
-    statusBadge: "Restricționat",
-    accessType: "RESTRICTED",
-    accessLabel: "Nu AIA",
-    restrictedBanner: "Restricționat · Necesită aprobare cadru didactic",
-    buttonLabel: "Cere aprobare CD",
+    statusBadge: "Disponibil",
+    stareTehnica: "DISPONIBILA",
+    buttonLabel: "Rezervă resursa",
     imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
     targetPath: "/resources/5",
   },
@@ -117,15 +105,15 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
 
 export function ResourcesPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [items, setItems] = useState<CatalogCardItem[]>(CATALOG_ITEMS)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("toate")
   const [deptFilter, setDeptFilter] = useState("toate")
-  const [specFilter, setSpecFilter] = useState("AIA")
   const [statusFilter, setStatusFilter] = useState("toate")
   const [maxDuration, setMaxDuration] = useState(4)
-  const [sortBy, setSortBy] = useState("Specializare")
+  const [sortBy, setSortBy] = useState("Disponibilitate")
 
   useEffect(() => {
     resourcesApi
@@ -144,6 +132,7 @@ export function ResourcesPage() {
               return {
                 ...card,
                 id: matched.id,
+                stareTehnica: matched.stare_tehnica,
                 targetPath: `/resources/${matched.id}`,
               }
             })
@@ -157,51 +146,57 @@ export function ResourcesPage() {
     setSearch("")
     setTypeFilter("toate")
     setDeptFilter("toate")
-    setSpecFilter("AIA")
     setStatusFilter("toate")
     setMaxDuration(4)
   }
 
-  const filteredItems = items.filter((item) => {
-    const q = search.trim().toLowerCase()
-    if (
-      q &&
-      !item.name.toLowerCase().includes(q) &&
-      !item.code.toLowerCase().includes(q) &&
-      !item.specsAndRoom.toLowerCase().includes(q)
-    ) {
-      return false
-    }
-    if (typeFilter !== "toate" && item.categoryTag !== typeFilter) {
-      return false
-    }
-    if (deptFilter !== "toate" && item.department !== deptFilter) {
-      return false
-    }
-    if (statusFilter !== "toate" && item.statusBadge !== statusFilter) {
-      return false
-    }
-    return true
-  })
+  const isStudent = !user || user.rol === "STUDENT"
+
+  const filteredItems = items
+    .filter((item) => {
+      if (isStudent && item.stareTehnica !== "DISPONIBILA") {
+        return false
+      }
+      const q = search.trim().toLowerCase()
+      if (
+        q &&
+        !item.name.toLowerCase().includes(q) &&
+        !item.code.toLowerCase().includes(q) &&
+        !item.specsAndRoom.toLowerCase().includes(q)
+      ) {
+        return false
+      }
+      if (typeFilter !== "toate" && item.categoryTag !== typeFilter) {
+        return false
+      }
+      if (deptFilter !== "toate" && item.department !== deptFilter) {
+        return false
+      }
+      if (statusFilter !== "toate" && item.statusBadge !== statusFilter) {
+        return false
+      }
+      return true
+    })
+    .sort((a, b) => {
+      if (sortBy === "Nume") return a.name.localeCompare(b.name)
+      if (sortBy === "Categorie") return a.categoryTag.localeCompare(b.categoryTag)
+      return a.id - b.id
+    })
+
+  const availableCount = filteredItems.filter((i) => i.statusBadge === "Disponibil").length
+  const inUseCount = filteredItems.filter((i) => i.statusBadge === "În utilizare").length
+  const reservedCount = filteredItems.filter((i) => i.statusBadge === "Rezervat").length
 
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Catalog de resurse"]}>
       <div className="max-w-7xl mx-auto space-y-4">
         <Card className="rounded-2xl border-neutral-200 bg-white p-5 shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
-                Catalog de resurse
-              </h1>
-              <Badge
-                variant="outline"
-                className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-700 text-[11px] font-medium px-2.5 py-0.5"
-              >
-                AIA / Calculatoare
-              </Badge>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+              Catalog de resurse
+            </h1>
             <p className="text-xs text-neutral-500">
-              Găsește resursa potrivită și consultă disponibilitatea. Echipamentele din alte specializări necesită aprobare cadru didactic.
+              Găsește resursa potrivită și consultă disponibilitatea în timp real.
             </p>
           </div>
 
@@ -258,16 +253,6 @@ export function ResourcesPage() {
               </select>
 
               <select
-                value={specFilter}
-                onChange={(e) => setSpecFilter(e.target.value)}
-                className="h-7 rounded-full border border-neutral-200 bg-white px-3 text-[11px] font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-              >
-                <option value="AIA">Specializare: AIA</option>
-                <option value="Calculatoare">Specializare: Calculatoare</option>
-                <option value="Toate">Specializare: toate</option>
-              </select>
-
-              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="h-7 rounded-full border border-neutral-200 bg-white px-3 text-[11px] font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-neutral-900"
@@ -276,7 +261,6 @@ export function ResourcesPage() {
                 <option value="Disponibil">Stare: Disponibil</option>
                 <option value="Rezervat">Stare: Rezervat</option>
                 <option value="În utilizare">Stare: În utilizare</option>
-                <option value="Restricționat">Stare: Restricționat</option>
               </select>
             </div>
 
@@ -314,7 +298,7 @@ export function ResourcesPage() {
               variant="outline"
               className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-700 text-[11px] font-medium px-2.5 py-0.5"
             >
-              2 accesibile · 1 în utilizare · 2 restricționate
+              {availableCount} disponibile · {reservedCount} rezervate · {inUseCount} în utilizare
             </Badge>
           </div>
 
@@ -323,17 +307,10 @@ export function ResourcesPage() {
             onChange={(e) => setSortBy(e.target.value)}
             className="h-8 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-neutral-900"
           >
-            <option value="Specializare">Sortează: Specializare</option>
             <option value="Disponibilitate">Sortează: Disponibilitate</option>
             <option value="Nume">Sortează: Nume</option>
+            <option value="Categorie">Sortează: Categorie</option>
           </select>
-        </div>
-
-        <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-2.5 flex items-center gap-2.5 text-xs text-blue-700">
-          <Info className="h-4 w-4 text-blue-600 shrink-0" />
-          <span>
-            Profilul tău academic <strong>AIA / Calculatoare</strong> îți oferă acces direct la resursele din categoriile Calculatoare și Roboți. Celelalte categorii necesită aprobare cadru didactic.
-          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -343,15 +320,8 @@ export function ResourcesPage() {
               className="rounded-2xl border-neutral-200 bg-white overflow-hidden shadow-none flex flex-col justify-between"
             >
               <div>
-                {item.restrictedBanner && (
-                  <div className="bg-rose-50/90 text-rose-700 border-b border-rose-100 px-3.5 py-1.5 text-[11px] font-medium flex items-center gap-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
-                    <span>{item.restrictedBanner}</span>
-                  </div>
-                )}
-
                 <div className="p-3 pb-0">
-                  <div className="h-36 w-full rounded-xl overflow-hidden bg-neutral-100 border border-neutral-100">
+                  <div className="h-40 w-full rounded-xl overflow-hidden bg-neutral-100 border border-neutral-100">
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -394,31 +364,13 @@ export function ResourcesPage() {
                       {item.categoryTag}
                     </Badge>
 
-                    {item.accessType === "AIA" && (
-                      <Badge
-                        variant="outline"
-                        className="rounded-md border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5"
-                      >
-                        {item.accessLabel}
-                      </Badge>
-                    )}
-
-                    {item.accessType === "RETURN_TODAY" && (
+                    {item.returnTodayBadge && (
                       <Badge
                         variant="outline"
                         className="rounded-md border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1"
                       >
                         <AlertTriangle className="h-3 w-3 text-amber-600" />
-                        {item.accessLabel}
-                      </Badge>
-                    )}
-
-                    {item.accessType === "RESTRICTED" && (
-                      <Badge
-                        variant="outline"
-                        className="rounded-md border-rose-200 bg-rose-50 text-rose-700 text-[10px] font-semibold px-2 py-0.5"
-                      >
-                        {item.accessLabel}
+                        {item.returnTodayBadge}
                       </Badge>
                     )}
                   </div>
@@ -447,7 +399,7 @@ export function ResourcesPage() {
 
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-neutral-500">
-            Se afișează 1–{filteredItems.length} din {CATALOG_ITEMS.length} resurse
+            Se afișează 1–{filteredItems.length} din {filteredItems.length} resurse
           </span>
 
           <div className="flex items-center gap-1.5">
