@@ -248,28 +248,77 @@ export function GroupBookingPage() {
 
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-xs space-y-5">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Data activității</h3>
-                <div className="mt-2">
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-neutral-200 px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-black"
-                  />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Data activității</h3>
+                    <div className="text-xs font-bold text-neutral-900 mt-0.5">Luni, 26 octombrie 2026</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+                    <span className="font-semibold text-neutral-800">Octombrie 2026</span>
+                    <button type="button" className="p-1 hover:bg-neutral-100 rounded">‹</button>
+                    <button type="button" className="p-1 hover:bg-neutral-100 rounded">›</button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-50/70 border border-neutral-200/80">
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-neutral-400 pb-2">
+                    <span>Lu</span><span>Ma</span><span>Mi</span><span>Jo</span><span>Vi</span><span>Sâ</span><span>Du</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
+                    <span className="text-neutral-300 py-1">28</span>
+                    <span className="text-neutral-300 py-1">29</span>
+                    <span className="text-neutral-300 py-1">30</span>
+                    <span className="py-1 text-neutral-600">1</span>
+                    <span className="py-1 text-neutral-600">2</span>
+                    <span className="py-1 text-neutral-600">3</span>
+                    <span className="py-1 text-neutral-600">4</span>
+                    <span className="py-1 text-neutral-600">5</span>
+                    <span className="py-1 text-neutral-600">6</span>
+                    <span className="py-1 text-neutral-600">7</span>
+                    <span className="py-1 text-neutral-600">8</span>
+                    <span className="py-1 text-neutral-600">9</span>
+                    <span className="py-1 text-neutral-600">10</span>
+                    <span className="py-1 text-neutral-600">11</span>
+                    <span className="py-1 text-neutral-600">12</span>
+                    <span className="py-1 text-neutral-600">13</span>
+                    <span className="py-1 text-neutral-600">14</span>
+                    <span className="py-1 text-neutral-600">15</span>
+                    <span className="py-1 text-neutral-600">16</span>
+                    <span className="py-1 text-neutral-600">17</span>
+                    <span className="py-1 text-neutral-600">18</span>
+                    <span className="py-1 text-neutral-600">19</span>
+                    <span className="py-1 text-neutral-600">20</span>
+                    <span className="py-1 text-neutral-600">21</span>
+                    <span className="py-1 text-neutral-600">22</span>
+                    <span className="py-1 text-neutral-600">23</span>
+                    <span className="py-1 text-neutral-600">24</span>
+                    <span className="py-1 text-neutral-600">25</span>
+                    <span className="py-1 bg-black text-white font-bold rounded-full">26</span>
+                    <span className="py-1 text-neutral-600">27</span>
+                    <span className="py-1 text-neutral-600">28</span>
+                    <span className="py-1 text-neutral-600">29</span>
+                    <span className="py-1 text-neutral-600">30</span>
+                    <span className="py-1 text-neutral-600">31</span>
+                    <span className="text-neutral-300 py-1">1</span>
+                  </div>
                 </div>
               </div>
 
               <div className="border-t border-neutral-100 pt-4 space-y-2.5">
                 <h4 className="text-xs font-bold text-neutral-900">
-                  Disponibilitate · {selectedRoom?.cod || "Laborator"}
+                  Disponibilitate · {selectedRoom?.cod || "Lab 210"}
                 </h4>
-                <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-600 space-y-1">
-                  <div className="font-semibold text-neutral-900">
-                    {formattedStart}-{formattedEnd} · Interval selectat
+                <div className="space-y-2">
+                  <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200 text-xs space-y-0.5">
+                    <div className="font-semibold text-neutral-700">08:00–12:00 · Mentenanță</div>
+                    <div className="text-[11px] text-neutral-500">Indisponibil · nu poate fi suprascris</div>
                   </div>
-                  <div className="text-[11px] text-neutral-500">
-                    {selectedRes?.nume} · {durationHours} ore · {selectedRoom?.cod}
+                  <div className="p-3 rounded-xl bg-neutral-50/80 border border-neutral-300 text-xs space-y-0.5">
+                    <div className="font-semibold text-neutral-900">{formattedStart}–{formattedEnd} · Interval selectat</div>
+                    <div className="text-[11px] text-neutral-500">
+                      12× {selectedRes?.nume || "Kituri STM32"} · {durationHours} ore · {selectedRoom?.cod || "Lab 210"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -277,7 +326,7 @@ export function GroupBookingPage() {
               <div className="border-t border-neutral-100 pt-4 space-y-3">
                 <h4 className="text-xs font-bold text-neutral-900">Sumarul rezervării</h4>
                 <div className="p-3.5 rounded-xl bg-neutral-900 text-white text-xs space-y-1">
-                  <div className="font-semibold">{selectedDate} · {formattedStart} - {formattedEnd}</div>
+                  <div className="font-semibold">26.10.2026 · Luni {formattedStart} - {formattedEnd}</div>
                   <div className="text-neutral-400 text-[11px]">Durată: {durationHours} ore · {selectedRes?.nume}</div>
                 </div>
 
@@ -289,7 +338,7 @@ export function GroupBookingPage() {
                     className="mt-0.5 rounded border-neutral-300 text-black focus:ring-black"
                   />
                   <span className="text-[11px] text-neutral-600 leading-snug">
-                    Confirm alocarea echipamentelor pentru activitatea didactică cu grupa de studenți.
+                    Bifează confirmarea de mai sus pentru a continua. Nicio rezervare nu a fost modificată încă.
                   </span>
                 </label>
 

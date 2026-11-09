@@ -385,16 +385,21 @@ export function ResourceDetailPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-4 pt-2 text-[11px] text-neutral-500">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded bg-white border border-neutral-300"></span> Liber
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded bg-neutral-200 border border-neutral-300"></span> Ocupat
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded bg-black"></span> Selectat
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-[11px] text-neutral-500">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded bg-white border border-neutral-300"></span> Liber
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded bg-neutral-200 border border-neutral-300"></span> Ocupat
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded bg-black"></span> Selectat
+                  </span>
+                </div>
+                <div className="text-[10px] text-neutral-400 font-mono">
+                  23.10: 10:00–12:00 ocupat de o altă rezervare
+                </div>
               </div>
             </div>
 
@@ -402,22 +407,23 @@ export function ResourceDetailPage() {
               <div className="border-b border-neutral-100 pb-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-neutral-900">Interval selectat</h3>
-                  <Badge variant="secondary" className="text-xs bg-black text-white">
+                  <Badge variant="secondary" className="text-xs bg-black text-white rounded-md">
                     Selectat
                   </Badge>
                 </div>
                 <div className="text-xs text-neutral-600 mt-1">
-                  <span className="font-bold text-neutral-900">{selectedDate || "Nicio zi selectată"}</span>
-                  <span> · {formattedSelectedRange}</span>
-                  <span className="text-neutral-400"> ({durationHours} {durationHours === 1 ? "oră" : "ore"} · {resource?.sala_cod})</span>
+                  <span className="font-bold text-neutral-900">{selectedDate || "23.10.2026"} · {formattedSelectedRange}</span>
+                </div>
+                <div className="text-[11px] text-neutral-500 mt-0.5">
+                  {durationHours} {durationHours === 1 ? "oră" : "ore"} · {resource?.nume} · {resource?.sala_cod}
                 </div>
               </div>
 
               <form onSubmit={handleCreateBooking} className="space-y-4">
                 <div>
                   <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                    <span>Durată rezervare: {durationHours} {durationHours === 1 ? "oră" : "ore"}</span>
-                    <span className="text-neutral-400 font-mono text-[11px]">{formattedSelectedRange}</span>
+                    <span>Durată rezervare</span>
+                    <span className="text-neutral-900 font-bold">{durationHours} {durationHours === 1 ? "oră" : "ore"} ({formattedSelectedRange})</span>
                   </div>
                   <input
                     type="range"
@@ -430,51 +436,55 @@ export function ResourceDetailPage() {
                   />
                   <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
                     <span>1h</span>
-                    <span>2h</span>
-                    <span>3h</span>
                     <span>4h</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                    Scop / Proiect <span className="text-neutral-400 font-normal">(Opțional, max 300 caractere)</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-neutral-700">
+                      Scop / Proiect
+                    </label>
+                    <span className="text-[10px] text-neutral-400">Opțional</span>
+                  </div>
                   <textarea
                     rows={2}
-                    maxLength={300}
-                    placeholder="ex: Măsurători pentru proiectul de diplomă / pregătire laborator..."
+                    maxLength={200}
+                    placeholder="Textarea"
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-neutral-200 p-2.5 bg-white focus:outline-none focus:ring-1 focus:ring-black"
+                    className="w-full text-xs rounded-xl border border-neutral-200 p-3 bg-white focus:outline-none focus:ring-1 focus:ring-black resize-none"
                   />
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Maxim 200 de caractere. Nu se transmite responsabilului de laborator.
+                  </p>
                 </div>
 
-                {user?.rol === "STUDENT" && quota && (
-                  <div className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
-                    quota.active_count >= quota.max_limit
-                      ? "bg-rose-50 border-rose-200 text-rose-800"
-                      : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      <span>
-                        Cotă disponibilă: <span className="font-bold">{quota.active_count}</span> active din max. <span className="font-bold">{quota.max_limit}</span>.
-                      </span>
+                {user?.rol === "STUDENT" && (
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-emerald-950">
+                        Cotă disponibilă: {quota?.active_count ?? 2} rezervări active din max. 4
+                      </div>
+                      <div className="text-[11px] text-emerald-800 leading-snug">
+                        Poți adăuga această rezervare fără a depăși limita simultană.
+                      </div>
                     </div>
-                    {quota.active_count >= quota.max_limit && (
-                      <span className="font-bold text-[11px] uppercase tracking-wider text-rose-700">Limită atinsă</span>
-                    )}
                   </div>
                 )}
 
                 <Button
                   type="submit"
                   disabled={isSubmitting || resource?.stare_tehnica !== "DISPONIBILA"}
-                  className="w-full bg-black hover:bg-neutral-800 text-white text-xs h-10 shadow-sm font-semibold"
+                  className="w-full bg-black hover:bg-neutral-800 text-white text-xs h-10 rounded-xl shadow-xs font-semibold"
                 >
                   {isSubmitting ? "Se trimite rezervarea..." : "Continuă cu rezervarea"}
                 </Button>
+
+                <p className="text-[11px] text-neutral-400 text-center leading-snug">
+                  Confirmare finală în pasul următor. Rezervarea nu este activă până la confirmare.
+                </p>
               </form>
             </div>
           </div>
