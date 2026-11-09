@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
@@ -129,6 +129,7 @@ const HOURS = [9, 10, 11, 12, 13, 14]
 
 export function ResourceDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { user } = useAuth()
 
   const resKey = id || "1"
@@ -246,21 +247,7 @@ export function ResourceDetailPage() {
         scop: purpose.trim() || "Activitate didactică / cercetare de laborator",
       })
 
-      const newOccupied = { ...occupiedMap }
-      for (let h = selectedStartHour; h < selectedStartHour + durationHours; h++) {
-        newOccupied[`${selectedDayIdx}-${h}`] = true
-      }
-      setOccupiedMap(newOccupied)
-
-      const updatedQuota = await reservationsApi.getMyQuota().catch(() => ({
-        ...quota,
-        active_count: quota.active_count + 1,
-        can_reserve: quota.active_count + 1 < quota.max_limit,
-      }))
-      setQuota(updatedQuota)
-      setBookingSuccess(
-        `Rezervarea pentru ${displayTitle} (${selectedDay.displayDate} · ${formattedSelectedRange}) a fost înregistrată cu succes!`
-      )
+      navigate("/reservations")
     } catch (err: any) {
       const status = err.response?.status
       const detail: string = err.response?.data?.detail || "Eroare la înregistrarea rezervării."
