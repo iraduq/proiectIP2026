@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
@@ -11,6 +11,7 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
+  AlertCircle,
   Info,
 } from "lucide-react"
 import { Button } from "../components/ui/button"
@@ -128,7 +129,6 @@ const HOURS = [9, 10, 11, 12, 13, 14]
 
 export function ResourceDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const { user } = useAuth()
 
   const resKey = id || "1"
@@ -136,12 +136,15 @@ export function ResourceDetailPage() {
 
   const [resource, setResource] = useState<Resource | null>(null)
   const [quota, setQuota] = useState<StudentQuota>({
-    active_count: 2,
+    active_count: 0,
     max_limit: 4,
     can_reserve: true,
     active_reservations: [],
   })
 
+  const [occupiedMap, setOccupiedMap] = useState<Record<string, boolean>>({
+    "0-10": true,
+  })
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
   const [selectedStartHour, setSelectedStartHour] = useState<number>(9)
   const [durationHours, setDurationHours] = useState<number>(1)
@@ -185,11 +188,21 @@ export function ResourceDetailPage() {
   const formattedSelectedRange = `${startStr}–${endStr}`
 
   const isSlotOccupied = (dayIdx: number, hour: number) => {
-    return dayIdx === 0 && hour === 10
+    return Boolean(occupiedMap[`${dayIdx}-${hour}`])
   }
+
+  const conflictingHours: number[] = []
+  for (let h = selectedStartHour; h < selectedStartHour + durationHours; h++) {
+    if (isSlotOccupied(selectedDayIdx, h) || h > 14) {
+      conflictingHours.push(h)
+    }
+  }
+  const hasSlotConflict = conflictingHours.length > 0
 
   const handleSelectSlot = (dayIdx: number, hour: number) => {
     if (isSlotOccupied(dayIdx, hour)) return
+    setErrorMsg(null)
+    setBookingSuccess(null)
     setSelectedDayIdx(dayIdx)
     setSelectedStartHour(hour)
   }
@@ -199,7 +212,23 @@ export function ResourceDetailPage() {
     setErrorMsg(null)
     setBookingSuccess(null)
 
-    if (user?.rol === "STUDENT" && quota.active_count >= quota.max_limit) {
+    if (hasSlotConflict) {
+      const firstConflict = conflictingHours[0]
+      if (firstConflict > 14) {
+        setErrorMsg(
+          `Intervalul selectat (${formattedSelectedRange}) depășește programul disponibil (până la 15:00). Redu durata rezervării.`
+        )
+      } else {
+        const cStart = `${String(firstConflict).padStart(2, "0")}:00`
+        const cEnd = `${String(firstConflict + 1).padStart(2, "0")}:00`
+        setErrorMsg(
+          `Conflict de programare: Intervalul selectat (${formattedSelectedRange}) se suprapune cu slotul deja ocupat (${cStart}–${cEnd}). Alege o durată mai scurtă sau un alt interval liber.`
+        )
+      }
+      return
+    }
+
+    if (quota.active_count >= quota.max_limit) {
       setIsQuotaModalOpen(true)
       return
     }
@@ -217,16 +246,24 @@ export function ResourceDetailPage() {
         scop: purpose.trim() || "Activitate didactică / cercetare de laborator",
       })
 
+      const newOccupied = { ...occupiedMap }
+      for (let h = selectedStartHour; h < selectedStartHour + durationHours; h++) {
+        newOccupied[`${selectedDayIdx}-${h}`] = true
+      }
+      setOccupiedMap(newOccupied)
+
       const updatedQuota = await reservationsApi.getMyQuota().catch(() => ({
         ...quota,
         active_count: quota.active_count + 1,
         can_reserve: quota.active_count + 1 < quota.max_limit,
       }))
       setQuota(updatedQuota)
-      setBookingSuccess("Rezervarea a fost înregistrată cu succes!")
+      setBookingSuccess(
+        `Rezervarea pentru ${displayTitle} (${selectedDay.displayDate} · ${formattedSelectedRange}) a fost înregistrată cu succes!`
+      )
     } catch (err: any) {
       const status = err.response?.status
-      const detail: string = err.response?.data?.detail || ""
+      const detail: string = err.response?.data?.detail || "Eroare la înregistrarea rezervării."
       if (
         status === 409 &&
         (detail.includes("4") ||
@@ -234,9 +271,15 @@ export function ResourceDetailPage() {
           detail.toLowerCase().includes("limit") ||
           detail.toLowerCase().includes("simultan"))
       ) {
+        const refreshed = await reservationsApi.getMyQuota().catch(() => ({
+          ...quota,
+          active_count: 4,
+          can_reserve: false,
+        }))
+        setQuota(refreshed)
         setIsQuotaModalOpen(true)
       } else {
-        navigate(`/reservations/new?resursa=${resource?.id || fallback.id}`)
+        setErrorMsg(detail)
       }
     } finally {
       setIsSubmitting(false)
@@ -298,7 +341,10 @@ export function ResourceDetailPage() {
 
         {errorMsg && (
           <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
-            <span className="font-medium">{errorMsg}</span>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span className="font-medium">{errorMsg}</span>
+            </div>
             <button onClick={() => setErrorMsg(null)} className="font-bold text-rose-700">
               ✕
             </button>
@@ -417,7 +463,7 @@ export function ResourceDetailPage() {
                         </td>
                         {DEFAULT_DAYS.map((d, dIdx) => {
                           const occupied = isSlotOccupied(dIdx, hour)
-                          const isSelected =
+                          const inSelectedWindow =
                             dIdx === selectedDayIdx &&
                             hour >= selectedStartHour &&
                             hour < selectedStartHour + durationHours
@@ -426,11 +472,15 @@ export function ResourceDetailPage() {
                             "bg-white text-neutral-800 border border-neutral-200 hover:bg-neutral-50 font-semibold"
                           let label = "Liber"
 
-                          if (occupied) {
+                          if (occupied && inSelectedWindow) {
+                            btnClass =
+                              "bg-rose-100 text-rose-700 border border-rose-300 cursor-not-allowed font-semibold"
+                            label = "Conflict"
+                          } else if (occupied) {
                             btnClass =
                               "bg-neutral-100 text-neutral-400 border border-neutral-200/80 cursor-not-allowed font-medium"
                             label = "Ocupat"
-                          } else if (isSelected) {
+                          } else if (inSelectedWindow) {
                             btnClass =
                               "bg-neutral-950 text-white border border-neutral-950 font-semibold"
                             label = "Selectat"
@@ -493,9 +543,15 @@ export function ResourceDetailPage() {
                     {durationHours} {durationHours === 1 ? "oră" : "ore"} · {displayTitle} · {displayRoom}
                   </div>
                 </div>
-                <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
-                  Selectat
-                </Badge>
+                {hasSlotConflict ? (
+                  <Badge className="rounded-full bg-rose-600 hover:bg-rose-600 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
+                    Indisponibil
+                  </Badge>
+                ) : (
+                  <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
+                    Selectat
+                  </Badge>
+                )}
               </div>
 
               <form onSubmit={handleContinueBooking} className="space-y-4">
@@ -514,12 +570,29 @@ export function ResourceDetailPage() {
                       max={4}
                       step={1}
                       value={durationHours}
-                      onChange={(e) => setDurationHours(Number(e.target.value))}
+                      onChange={(e) => {
+                        setErrorMsg(null)
+                        setDurationHours(Number(e.target.value))
+                      }}
                       className="flex-1 h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
                     />
                     <span className="text-[11px] text-neutral-400 font-mono">4h</span>
                   </div>
                 </div>
+
+                {hasSlotConflict && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 flex items-start gap-2.5">
+                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-rose-800">
+                        Conflict orar: intervalul {formattedSelectedRange} conține ore deja ocupate
+                      </div>
+                      <div className="text-[11px] text-rose-700">
+                        Slotul de la ora {String(conflictingHours[0]).padStart(2, "0")}:00 este ocupat. Redu durata sau selectează un alt interval liber din tabel.
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">

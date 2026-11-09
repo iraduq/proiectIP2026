@@ -9,7 +9,6 @@ import { RoomsPage } from "./pages/RoomsPage"
 import { ResourcesPage } from "./pages/ResourcesPage"
 import { ResourceDetailPage } from "./pages/ResourceDetailPage"
 import { ReservationsPage } from "./pages/ReservationsPage"
-import { NewReservationPage } from "./pages/NewReservationPage"
 import { TechnicalHistoryPage } from "./pages/TechnicalHistoryPage"
 import { ProfessorDashboardPage } from "./pages/ProfessorDashboardPage"
 import { GroupBookingPage } from "./pages/GroupBookingPage"
@@ -85,11 +84,7 @@ export function App() {
           />
           <Route
             path="/reservations/new"
-            element={
-              <ProtectedRoute>
-                <NewReservationPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/resources/1" replace />}
           />
           <Route
             path="/technical-history"
