@@ -7,6 +7,7 @@ import { DashboardPage } from "./pages/DashboardPage"
 import { AcademicAdminPage } from "./pages/AcademicAdminPage"
 import { RoomsPage } from "./pages/RoomsPage"
 import { ResourcesPage } from "./pages/ResourcesPage"
+import { ResourceDetailPage } from "./pages/ResourceDetailPage"
 import { ReservationsPage } from "./pages/ReservationsPage"
 import { TechnicalHistoryPage } from "./pages/TechnicalHistoryPage"
 
@@ -59,6 +60,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <ResourcesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/resources/:id"
+            element={
+              <ProtectedRoute>
+                <ResourceDetailPage />
               </ProtectedRoute>
             }
           />
