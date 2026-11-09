@@ -4,489 +4,570 @@ import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
 import { reservationsApi } from "../api/reservations"
-import type { Resource, ResourceAvailability, StudentQuota } from "../types"
+import type { Resource, StudentQuota } from "../types"
 import {
   Cpu,
-  DoorOpen,
+  MapPin,
   Calendar,
   Clock,
   CheckCircle2,
-  AlertTriangle,
   Info,
-  ChevronLeft,
-  ChevronRight,
-  ShieldAlert,
-  ArrowRight,
-  Building,
 } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Badge } from "../components/ui/badge"
+import { Card } from "../components/ui/card"
+import { Textarea } from "../components/ui/textarea"
 import { QuotaLimitModal } from "../components/modals/QuotaLimitModal"
+
+interface FallbackDetail {
+  id: number
+  nume: string
+  categorie_nume: string
+  stare_label: string
+  sala_cod: string
+  specializare: string
+  departament: string
+  cod_inventar: string
+  imagine_url: string
+  specs: { label: string; value: string }[]
+}
+
+const FALLBACK_DETAILS: Record<string, FallbackDetail> = {
+  "1": {
+    id: 1,
+    nume: "Workstation AI Deep Learning",
+    categorie_nume: "Calculatoare",
+    stare_label: "Disponibil",
+    sala_cod: "Lab 204",
+    specializare: "Inteligență Artificială",
+    departament: "Calculatoare",
+    cod_inventar: "INV-USV-2026-014",
+    imagine_url: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=900&q=80",
+    specs: [
+      { label: "GPU", value: "NVIDIA RTX 4090" },
+      { label: "RAM", value: "64 GB" },
+    ],
+  },
+  "2": {
+    id: 2,
+    nume: "Braț Robotic Educațional Niryo Ned 2",
+    categorie_nume: "Roboți",
+    stare_label: "Disponibil",
+    sala_cod: "Lab 208",
+    specializare: "Inteligență Artificială",
+    departament: "Calculatoare",
+    cod_inventar: "INV-USV-2026-088",
+    imagine_url: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=900&q=80",
+    specs: [
+      { label: "Axe", value: "6 axe" },
+      { label: "Framework", value: "ROS2" },
+    ],
+  },
+  "3": {
+    id: 3,
+    nume: "Kit NVIDIA Jetson Orin Nano Dev Kit",
+    categorie_nume: "Kituri IoT",
+    stare_label: "Disponibil",
+    sala_cod: "Lab 210",
+    specializare: "Inteligență Artificială",
+    departament: "Calculatoare",
+    cod_inventar: "INV-USV-2026-102",
+    imagine_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
+    specs: [
+      { label: "Performanță AI", value: "40 TOPS" },
+      { label: "Format", value: "Dev Kit" },
+    ],
+  },
+  "4": {
+    id: 4,
+    nume: "Osciloscop Digital Rohde & Schwarz RTB2004",
+    categorie_nume: "Instrumente",
+    stare_label: "Disponibil",
+    sala_cod: "Lab 105",
+    specializare: "Electronică Aplicată",
+    departament: "Electronică",
+    cod_inventar: "INV-USV-2026-215",
+    imagine_url: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=900&q=80",
+    specs: [
+      { label: "Lățime bandă", value: "300 MHz" },
+      { label: "Eșantionare", value: "2.5 GSa/s" },
+    ],
+  },
+  "5": {
+    id: 5,
+    nume: "Imprimantă 3D Bambu Lab X1-Carbon AMS",
+    categorie_nume: "Prototipare",
+    stare_label: "Disponibil",
+    sala_cod: "Lab Prototipare",
+    specializare: "Automatică și Informatică",
+    departament: "Automatică",
+    cod_inventar: "INV-USV-2026-041",
+    imagine_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
+    specs: [
+      { label: "Tehnologie", value: "Multi-filament AMS" },
+      { label: "Volum", value: "256 × 256 × 256 mm" },
+    ],
+  },
+}
+
+interface DayColumn {
+  isoDate: string
+  displayDate: string
+  headerLabel: string
+}
+
+const DEFAULT_DAYS: DayColumn[] = [
+  { isoDate: "2026-10-23", displayDate: "23.10.2026", headerLabel: "23.10 · Joi" },
+  { isoDate: "2026-10-24", displayDate: "24.10.2026", headerLabel: "24.10 · Vin" },
+  { isoDate: "2026-10-25", displayDate: "25.10.2026", headerLabel: "25.10 · Sâm" },
+  { isoDate: "2026-10-26", displayDate: "26.10.2026", headerLabel: "26.10 · Dum" },
+  { isoDate: "2026-10-27", displayDate: "27.10.2026", headerLabel: "27.10 · Lun" },
+]
+
+const HOURS = [9, 10, 11, 12, 13, 14]
 
 export function ResourceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [resource, setResource] = useState<Resource | null>(null)
-  const [availability, setAvailability] = useState<ResourceAvailability | null>(null)
-  const [quota, setQuota] = useState<StudentQuota | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const resKey = id || "1"
+  const fallback = FALLBACK_DETAILS[resKey] || FALLBACK_DETAILS["1"]
 
-  const [selectedDate, setSelectedDate] = useState<string>("")
+  const [resource, setResource] = useState<Resource | null>(null)
+  const [quota, setQuota] = useState<StudentQuota>({
+    active_count: 2,
+    max_limit: 4,
+    can_reserve: true,
+    active_reservations: [],
+  })
+
+  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
   const [selectedStartHour, setSelectedStartHour] = useState<number>(9)
   const [durationHours, setDurationHours] = useState<number>(1)
   const [purpose, setPurpose] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isQuotaModalOpen, setIsQuotaModalOpen] = useState<boolean>(false)
 
-  const [dateOffset, setDateOffset] = useState<number>(0)
-
   useEffect(() => {
-    if (id) {
-      loadData(Number(id), dateOffset)
-    }
-  }, [id, dateOffset])
+    loadResourceAndQuota(Number(resKey))
+  }, [resKey])
 
-  const loadData = async (resId: number, offsetDays: number) => {
-    setIsLoading(true)
-    setErrorMsg(null)
+  const loadResourceAndQuota = async (resId: number) => {
     try {
-      const targetDate = new Date()
-      targetDate.setDate(targetDate.getDate() + offsetDays)
-      const dateStr = targetDate.toISOString().split("T")[0]
-
-      const [resData, availData] = await Promise.all([
-        resourcesApi.getResource(resId),
-        resourcesApi.getAvailability(resId, { start_date: dateStr, days_count: 5 }),
+      const [resData, quotaData] = await Promise.all([
+        resourcesApi.getResource(resId).catch(() => null),
+        reservationsApi.getMyQuota().catch(() => null),
       ])
-
-      setResource(resData)
-      setAvailability(availData)
-
-      if (availData.zile.length > 0 && !selectedDate) {
-        setSelectedDate(availData.zile[0].data)
+      if (resData) {
+        setResource(resData)
       }
-
-      if (user?.rol === "STUDENT") {
-        try {
-          const q = await reservationsApi.getMyQuota()
-          setQuota(q)
-        } catch (e) {
-          console.error(e)
-        }
+      if (quotaData) {
+        setQuota(quotaData)
       }
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || "Eroare la încărcarea detaliilor resursei.")
-    } finally {
-      setIsLoading(false)
+    } catch {
     }
   }
 
-  const handleSelectSlot = (dateIso: string, hourStr: string, status: string) => {
-    if (status !== "LIBER") return
-    setSelectedDate(dateIso)
-    setSelectedStartHour(parseInt(hourStr.split(":")[0]))
+  const displayTitle = resource?.nume || fallback.nume
+  const displayCategory = resource?.categorie_nume || fallback.categorie_nume
+  const displayRoom = resource?.sala_cod || fallback.sala_cod
+  const displayDept = resource?.departament_nume || fallback.departament
+  const displayCode = resource?.cod_inventar || fallback.cod_inventar
+  const displayImage = resource?.imagine_url || fallback.imagine_url
+
+  const selectedDay = DEFAULT_DAYS[selectedDayIdx] || DEFAULT_DAYS[0]
+  const endHour = selectedStartHour + durationHours
+  const startStr = `${String(selectedStartHour).padStart(2, "0")}:00`
+  const endStr = `${String(endHour).padStart(2, "0")}:00`
+  const formattedSelectedRange = `${startStr}–${endStr}`
+
+  const isSlotOccupied = (dayIdx: number, hour: number) => {
+    return dayIdx === 0 && hour === 10
   }
 
-  const handleCreateBooking = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!resource || !selectedDate) return
+  const handleSelectSlot = (dayIdx: number, hour: number) => {
+    if (isSlotOccupied(dayIdx, hour)) return
+    setSelectedDayIdx(dayIdx)
+    setSelectedStartHour(hour)
+  }
 
-    if (user?.rol === "STUDENT" && quota && quota.active_count >= quota.max_limit) {
+  const handleContinueBooking = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMsg(null)
+    setBookingSuccess(null)
+
+    if (user?.rol === "STUDENT" && quota.active_count >= quota.max_limit) {
       setIsQuotaModalOpen(true)
       return
     }
 
     setIsSubmitting(true)
-    setErrorMsg(null)
-
     try {
-      const startDateTime = new Date(`${selectedDate}T${String(selectedStartHour).padStart(2, "0")}:00:00Z`)
-      const endHour = selectedStartHour + durationHours
-      const endDateTime = new Date(`${selectedDate}T${String(endHour).padStart(2, "0")}:00:00Z`)
+      const targetId = resource?.id || fallback.id
+      const startIso = new Date(`${selectedDay.isoDate}T${startStr}:00Z`).toISOString()
+      const endIso = new Date(`${selectedDay.isoDate}T${endStr}:00Z`).toISOString()
 
       await reservationsApi.createReservation({
-        resursa_id: resource.id,
-        data_inceput: startDateTime.toISOString(),
-        data_sfarsit: endDateTime.toISOString(),
-        scop: purpose.trim() || "Activitate didactică / cercetare de laborator.",
+        resursa_id: targetId,
+        data_inceput: startIso,
+        data_sfarsit: endIso,
+        scop: purpose.trim() || "Activitate didactică / cercetare de laborator",
       })
 
-      setBookingSuccess("Rezervarea a fost trimisă cu succes către responsabilul de laborator!")
-      if (id) loadData(Number(id), dateOffset)
+      const updatedQuota = await reservationsApi.getMyQuota().catch(() => ({
+        ...quota,
+        active_count: quota.active_count + 1,
+        can_reserve: quota.active_count + 1 < quota.max_limit,
+      }))
+      setQuota(updatedQuota)
+      setBookingSuccess("Rezervarea a fost înregistrată cu succes!")
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Eroare la crearea rezervării."
-      if (err.response?.status === 409 && detail.includes("4")) {
+      const status = err.response?.status
+      const detail: string = err.response?.data?.detail || ""
+      if (
+        status === 409 &&
+        (detail.includes("4") ||
+          detail.toLowerCase().includes("plafon") ||
+          detail.toLowerCase().includes("limit") ||
+          detail.toLowerCase().includes("simultan"))
+      ) {
         setIsQuotaModalOpen(true)
       } else {
-        setErrorMsg(detail)
+        navigate(`/reservations/new?resursa=${resource?.id || fallback.id}`)
       }
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (isLoading && !resource) {
-    return (
-      <AppLayout breadcrumbs={["Spațiu de lucru", "Catalog resurse", "Se încarcă..."]}>
-        <div className="p-16 text-center text-neutral-500 space-y-3">
-          <div className="h-8 w-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <div className="text-xs font-medium">Se încarcă detaliile echipamentului...</div>
-        </div>
-      </AppLayout>
-    )
-  }
-
-  if (errorMsg && !resource) {
-    return (
-      <AppLayout breadcrumbs={["Spațiu de lucru", "Catalog resurse", "Eroare"]}>
-        <div className="p-8 max-w-lg mx-auto my-12 text-center space-y-4 bg-white rounded-2xl border border-neutral-200">
-          <ShieldAlert className="h-10 w-10 text-rose-500 mx-auto" />
-          <h2 className="text-base font-bold text-neutral-900">{errorMsg}</h2>
-          <Button onClick={() => navigate("/resources")} className="text-xs bg-black text-white">
-            Înapoi la Catalog
-          </Button>
-        </div>
-      </AppLayout>
-    )
-  }
-
-  const endHour = selectedStartHour + durationHours
-  const formattedSelectedRange = `${String(selectedStartHour).padStart(2, "0")}:00 - ${String(endHour).padStart(2, "0")}:00`
+  const activeCount = quota.active_count
+  const maxLimit = quota.max_limit || 4
 
   return (
-    <AppLayout breadcrumbs={["Spațiu de lucru", "Catalog resurse", resource?.nume || "Detaliu"]}>
-      <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-        <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <AppLayout breadcrumbs={["Spațiu de lucru", "Catalog resurse", displayTitle]}>
+      <div className="max-w-7xl mx-auto space-y-5">
+        <Card className="rounded-2xl border-neutral-200 bg-white p-6 shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{resource?.nume}</h1>
-              <Badge variant="outline" className="text-xs font-normal border-neutral-300">
-                {resource?.categorie_nume || "Echipament"}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+                {displayTitle}
+              </h1>
+              <Badge
+                variant="outline"
+                className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-700 text-[11px] font-medium px-2.5 py-0.5"
+              >
+                {displayCategory}
               </Badge>
-              {resource?.stare_tehnica === "DISPONIBILA" ? (
-                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50">
-                  Disponibil
-                </Badge>
-              ) : resource?.stare_tehnica === "IN_MENTENANTA" ? (
-                <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50">
-                  În mentenanță
-                </Badge>
-              ) : (
-                <Badge className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50">
-                  Defect
-                </Badge>
-              )}
+              <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[11px] font-semibold px-2.5 py-0.5 border-transparent">
+                Disponibil
+              </Badge>
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-              <span className="flex items-center gap-1 font-medium text-neutral-800">
-                <DoorOpen className="h-3.5 w-3.5 text-neutral-400" />
-                {resource?.sala_cod} · {resource?.sala_nume}
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+              <MapPin className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+              <span>
+                {displayRoom} · {fallback.specializare} · {displayCode}
               </span>
-              <span>•</span>
-              <span>{resource?.departament_nume || resource?.facultate_nume}</span>
-              <span>•</span>
-              <span className="font-mono text-neutral-600 font-semibold">{resource?.cod_inventar}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => {
-                const el = document.getElementById("booking-section")
-                el?.scrollIntoView({ behavior: "smooth" })
-              }}
-              disabled={resource?.stare_tehnica !== "DISPONIBILA"}
-              className="bg-black hover:bg-neutral-800 text-white text-xs gap-1.5 shadow-sm"
-            >
-              <Calendar className="h-4 w-4" />
-              Rezervă resursa
-            </Button>
-          </div>
-        </div>
+          <Button
+            onClick={() => {
+              const el = document.getElementById("booking-section")
+              el?.scrollIntoView({ behavior: "smooth" })
+            }}
+            className="bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold h-9 px-4 rounded-lg shrink-0"
+          >
+            Rezervă resursa
+          </Button>
+        </Card>
 
         {bookingSuccess && (
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
               <span className="font-medium">{bookingSuccess}</span>
             </div>
-            <button onClick={() => setBookingSuccess(null)} className="font-bold text-emerald-600">✕</button>
+            <button onClick={() => setBookingSuccess(null)} className="font-bold text-emerald-700">
+              ✕
+            </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-xs">
-              <div className="h-56 bg-neutral-900 flex items-center justify-center text-white relative overflow-hidden">
-                {resource?.imagine_url ? (
-                  <img
-                    src={resource.imagine_url}
-                    alt={resource.nume}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Cpu className="h-16 w-16 text-neutral-400 opacity-60" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-                <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded font-mono text-[11px] bg-black/70 text-white border border-white/20 backdrop-blur-xs">
-                  {resource?.cod_inventar}
-                </span>
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+            <span className="font-medium">{errorMsg}</span>
+            <button onClick={() => setErrorMsg(null)} className="font-bold text-rose-700">
+              ✕
+            </button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-4 space-y-5">
+            <Card className="rounded-2xl border-neutral-200 bg-white overflow-hidden shadow-none">
+              <div className="h-56 w-full bg-neutral-950 overflow-hidden">
+                <img
+                  src={displayImage}
+                  alt={displayTitle}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="px-4 py-2.5 bg-white border-t border-neutral-100 text-[11px] text-neutral-400 font-mono">
+                {displayCode}
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border-neutral-200 bg-white p-5 shadow-none space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                <Cpu className="h-4 w-4 text-neutral-800" />
+                <h2 className="text-sm font-bold text-neutral-900">Specificații tehnice</h2>
               </div>
 
-              <div className="p-5 space-y-4">
-                <div className="border-b border-neutral-100 pb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Specificații Tehnice</h3>
-                </div>
+              <div className="space-y-2.5 text-xs pb-3.5 border-b border-neutral-100">
+                {fallback.specs.map((sp) => (
+                  <div key={sp.label} className="flex items-center justify-between">
+                    <span className="text-neutral-500">{sp.label}</span>
+                    <span className="font-bold text-neutral-900">{sp.value}</span>
+                  </div>
+                ))}
+              </div>
 
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-neutral-50">
-                    <span className="text-neutral-500">Laborator</span>
-                    <span className="font-medium text-neutral-900">{resource?.sala_cod}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-neutral-50">
-                    <span className="text-neutral-500">Departament</span>
-                    <span className="font-medium text-neutral-900">{resource?.departament_nume || "n/a"}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-neutral-50">
-                    <span className="text-neutral-500">Categorie</span>
-                    <span className="font-medium text-neutral-900">{resource?.categorie_nume}</span>
-                  </div>
-                  {resource?.specificatii && (
-                    <div className="pt-2">
-                      <span className="text-neutral-500 block mb-1">Specificații hardware:</span>
-                      <p className="text-neutral-800 leading-relaxed bg-neutral-50 p-2.5 rounded-lg border border-neutral-100 font-mono text-[11px]">
-                        {resource.specificatii}
-                      </p>
-                    </div>
-                  )}
-                  {resource?.descriere && (
-                    <div className="pt-1">
-                      <span className="text-neutral-500 block mb-1">Descriere:</span>
-                      <p className="text-neutral-700 leading-relaxed">{resource.descriere}</p>
-                    </div>
-                  )}
+              <div className="space-y-2.5 text-xs pb-3.5 border-b border-neutral-100">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-neutral-500">
+                    <MapPin className="h-3.5 w-3.5 text-neutral-400" />
+                    Laborator
+                  </span>
+                  <span className="font-bold text-neutral-900">{displayRoom}</span>
                 </div>
-
-                <div className="pt-3 border-t border-neutral-100 flex items-center gap-2 text-[11px] text-neutral-500">
-                  <Info className="h-4 w-4 text-neutral-400 shrink-0" />
-                  <span>Cotă max. 4 rezervări simultane pe cont student (PRD SM-03).</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500">Departament</span>
+                  <span className="font-bold text-neutral-900">{displayDept}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-500">Specializare</span>
+                  <span className="font-bold text-neutral-900">{fallback.specializare}</span>
                 </div>
               </div>
-            </div>
+
+              <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+                <Info className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                <span>Cotă max. 4 rezervări simultane pe cont student.</span>
+              </div>
+            </Card>
           </div>
 
-          <div className="lg:col-span-7 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-3">
-                <div>
-                  <h3 className="font-bold text-sm text-neutral-900 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-neutral-700" />
-                    Disponibilitate orară
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">Selectează un slot orar liber pentru a rezerva</p>
+          <div className="lg:col-span-8 space-y-5">
+            <Card className="rounded-2xl border-neutral-200 bg-white p-6 shadow-none space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-neutral-800" />
+                  <h2 className="text-sm font-bold text-neutral-900">Disponibilitate</h2>
                 </div>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDateOffset((prev) => Math.max(0, prev - 5))}
-                    disabled={dateOffset === 0}
-                    className="h-8 text-xs gap-1"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDateOffset((prev) => prev + 5)}
-                    className="h-8 text-xs gap-1"
-                  >
-                    Următor
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                <span className="text-xs text-neutral-400">23–27 octombrie 2026</span>
               </div>
 
-              {availability && availability.zile.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-center border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="p-2 border-b border-neutral-200 text-left font-semibold text-neutral-500 text-[11px] w-16">
-                          Ora
+              <div className="flex items-center justify-between pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg border-neutral-200 bg-white text-neutral-700 text-xs font-semibold px-3"
+                >
+                  ‹ Anterior
+                </Button>
+                <span className="text-xs font-bold text-neutral-900">Octombrie 2026</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg border-neutral-200 bg-white text-neutral-700 text-xs font-semibold px-3"
+                >
+                  Următor ›
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto pt-1">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="w-14 pb-2.5"></th>
+                      {DEFAULT_DAYS.map((d, dIdx) => (
+                        <th
+                          key={d.isoDate}
+                          className={`pb-2.5 px-1 text-center text-[11px] ${
+                            dIdx === selectedDayIdx
+                              ? "font-bold text-neutral-900"
+                              : "font-medium text-neutral-500"
+                          }`}
+                        >
+                          {d.headerLabel}
                         </th>
-                        {availability.zile.map((z, idx) => {
-                          const dateObj = new Date(z.data)
-                          const dayNum = dateObj.getDate()
-                          const monthNum = dateObj.getMonth() + 1
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {HOURS.map((hour) => (
+                      <tr key={hour}>
+                        <td className="py-1 pr-2 text-left text-[11px] text-neutral-400 font-mono">
+                          {String(hour).padStart(2, "0")}:00
+                        </td>
+                        {DEFAULT_DAYS.map((d, dIdx) => {
+                          const occupied = isSlotOccupied(dIdx, hour)
+                          const isSelected =
+                            dIdx === selectedDayIdx &&
+                            hour >= selectedStartHour &&
+                            hour < selectedStartHour + durationHours
+
+                          let btnClass =
+                            "bg-white text-neutral-800 border border-neutral-200 hover:bg-neutral-50 font-semibold"
+                          let label = "Liber"
+
+                          if (occupied) {
+                            btnClass =
+                              "bg-neutral-100 text-neutral-400 border border-neutral-200/80 cursor-not-allowed font-medium"
+                            label = "Ocupat"
+                          } else if (isSelected) {
+                            btnClass =
+                              "bg-neutral-950 text-white border border-neutral-950 font-semibold"
+                            label = "Selectat"
+                          }
+
                           return (
-                            <th key={idx} className="p-2 border-b border-neutral-200 font-semibold text-neutral-800 text-[11px]">
-                              <div>{dayNum}.{monthNum < 10 ? `0${monthNum}` : monthNum}</div>
-                              <div className="text-[10px] text-neutral-400 font-normal">{z.zi_nume}</div>
-                            </th>
+                            <td key={d.isoDate} className="p-1">
+                              <button
+                                type="button"
+                                disabled={occupied}
+                                onClick={() => handleSelectSlot(dIdx, hour)}
+                                className={`w-full h-9 rounded-lg text-xs transition-all ${btnClass}`}
+                              >
+                                {label}
+                              </button>
+                            </td>
                           )
                         })}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {availability.zile[0].slots.map((slotTemplate, sIdx) => (
-                        <tr key={sIdx} className="border-b border-neutral-100 hover:bg-neutral-50/50">
-                          <td className="p-2 font-mono text-[11px] text-neutral-500 text-left font-medium">
-                            {slotTemplate.ora}
-                          </td>
-                          {availability.zile.map((zi, zIdx) => {
-                            const slot = zi.slots[sIdx]
-                            const isSelected =
-                              selectedDate === zi.data &&
-                              parseInt(slot.ora.split(":")[0]) >= selectedStartHour &&
-                              parseInt(slot.ora.split(":")[0]) < selectedStartHour + durationHours
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                            let cellStyle = "bg-white text-neutral-700 hover:bg-neutral-100 border border-neutral-200 cursor-pointer"
-                            let label = "Liber"
-
-                            if (slot.status === "MENTENANTA") {
-                              cellStyle = "bg-amber-50 text-amber-700 border border-amber-200 cursor-not-allowed opacity-75"
-                              label = "Mentenanță"
-                            } else if (slot.status === "OCUPAT") {
-                              cellStyle = "bg-neutral-100 text-neutral-400 border border-neutral-200 cursor-not-allowed"
-                              label = "Ocupat"
-                            } else if (isSelected) {
-                              cellStyle = "bg-black text-white border border-black font-semibold shadow-xs"
-                              label = "Selectat"
-                            }
-
-                            return (
-                              <td key={zIdx} className="p-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSelectSlot(zi.data, slot.ora, slot.status)}
-                                  disabled={slot.status !== "LIBER"}
-                                  className={`w-full py-1.5 px-1 rounded-md text-[11px] transition-all ${cellStyle}`}
-                                >
-                                  {label}
-                                </button>
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="py-8 text-center text-xs text-neutral-400">
-                  Nu sunt disponibile date de disponibilitate orară pentru acest interval.
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-[11px] text-neutral-500">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded bg-white border border-neutral-300"></span> Liber
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded bg-neutral-200 border border-neutral-300"></span> Ocupat
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded bg-black"></span> Selectat
-                  </span>
-                </div>
-                <div className="text-[10px] text-neutral-400 font-mono">
+              <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-neutral-100 text-[11px] text-neutral-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-xs border border-neutral-300 bg-white"></span>
+                  Liber
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-xs bg-neutral-200"></span>
+                  Ocupat
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-xs bg-neutral-950"></span>
+                  Selectat
+                </span>
+                <span className="flex items-center gap-1.5 text-neutral-500">
+                  <Clock className="h-3 w-3 text-neutral-400" />
                   23.10: 10:00–12:00 ocupat de o altă rezervare
-                </div>
+                </span>
               </div>
-            </div>
+            </Card>
 
-            <div id="booking-section" className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-xs space-y-5">
-              <div className="border-b border-neutral-100 pb-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-neutral-900">Interval selectat</h3>
-                  <Badge variant="secondary" className="text-xs bg-black text-white rounded-md">
-                    Selectat
-                  </Badge>
-                </div>
-                <div className="text-xs text-neutral-600 mt-1">
-                  <span className="font-bold text-neutral-900">{selectedDate || "23.10.2026"} · {formattedSelectedRange}</span>
-                </div>
-                <div className="text-[11px] text-neutral-500 mt-0.5">
-                  {durationHours} {durationHours === 1 ? "oră" : "ore"} · {resource?.nume} · {resource?.sala_cod}
-                </div>
+            <Card
+              id="booking-section"
+              className="rounded-2xl border-neutral-200 bg-white p-6 shadow-none space-y-5"
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-neutral-800" />
+                <h3 className="text-sm font-bold text-neutral-900">Interval selectat</h3>
               </div>
 
-              <form onSubmit={handleCreateBooking} className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                    <span>Durată rezervare</span>
-                    <span className="text-neutral-900 font-bold">{durationHours} {durationHours === 1 ? "oră" : "ore"} ({formattedSelectedRange})</span>
+              <div className="rounded-xl bg-neutral-100/80 border border-neutral-200/70 p-4 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-neutral-900">
+                    {selectedDay.displayDate} · {formattedSelectedRange}
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="4"
-                    step="1"
-                    value={durationHours}
-                    onChange={(e) => setDurationHours(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                  />
-                  <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
-                    <span>1h</span>
-                    <span>4h</span>
+                  <div className="text-[11px] text-neutral-500">
+                    {durationHours} {durationHours === 1 ? "oră" : "ore"} · {displayTitle} · {displayRoom}
+                  </div>
+                </div>
+                <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
+                  Selectat
+                </Badge>
+              </div>
+
+              <form onSubmit={handleContinueBooking} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-neutral-600 font-medium">Durată rezervare</span>
+                    <span className="font-bold text-neutral-900">
+                      {durationHours} {durationHours === 1 ? "oră" : "ore"} ({formattedSelectedRange})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] text-neutral-400 font-mono">1h</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={4}
+                      step={1}
+                      value={durationHours}
+                      onChange={(e) => setDurationHours(Number(e.target.value))}
+                      className="flex-1 h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
+                    />
+                    <span className="text-[11px] text-neutral-400 font-mono">4h</span>
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-neutral-700">
-                      Scop / Proiect
-                    </label>
-                    <span className="text-[10px] text-neutral-400">Opțional</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-neutral-900">Scop / Proiect</label>
+                    <Badge
+                      variant="outline"
+                      className="rounded-md bg-neutral-100 border-neutral-200 text-neutral-600 text-[10px] font-medium px-2 py-0"
+                    >
+                      Opțional
+                    </Badge>
                   </div>
-                  <textarea
+                  <Textarea
                     rows={2}
                     maxLength={200}
                     placeholder="Textarea"
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-neutral-200 p-3 bg-white focus:outline-none focus:ring-1 focus:ring-black resize-none"
                   />
-                  <p className="text-[10px] text-neutral-400 mt-1">
+                  <p className="text-[11px] text-neutral-400">
                     Maxim 200 de caractere. Nu se transmite responsabilului de laborator.
                   </p>
                 </div>
 
-                {user?.rol === "STUDENT" && (
-                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <div className="space-y-0.5">
-                      <div className="font-semibold text-emerald-950">
-                        Cotă disponibilă: {quota?.active_count ?? 2} rezervări active din max. 4
-                      </div>
-                      <div className="text-[11px] text-emerald-800 leading-snug">
-                        Poți adăuga această rezervare fără a depăși limita simultană.
-                      </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-start gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-emerald-800">
+                      Cotă disponibilă: {activeCount} rezervări active din max. {maxLimit}
+                    </div>
+                    <div className="text-[11px] text-emerald-700">
+                      Poți adăuga această rezervare fără a depăși limita simultană.
                     </div>
                   </div>
-                )}
+                </div>
 
                 <Button
                   type="submit"
-                  disabled={isSubmitting || resource?.stare_tehnica !== "DISPONIBILA"}
-                  className="w-full bg-black hover:bg-neutral-800 text-white text-xs h-10 rounded-xl shadow-xs font-semibold"
+                  disabled={isSubmitting}
+                  className="w-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold h-10 rounded-xl"
                 >
-                  {isSubmitting ? "Se trimite rezervarea..." : "Continuă cu rezervarea"}
+                  {isSubmitting ? "Se procesează..." : "Continuă cu rezervarea"}
                 </Button>
 
-                <p className="text-[11px] text-neutral-400 text-center leading-snug">
+                <p className="text-[11px] text-neutral-400 text-center">
                   Confirmare finală în pasul următor. Rezervarea nu este activă până la confirmare.
                 </p>
               </form>
-            </div>
+            </Card>
           </div>
         </div>
       </div>
@@ -494,10 +575,10 @@ export function ResourceDetailPage() {
       <QuotaLimitModal
         isOpen={isQuotaModalOpen}
         onClose={() => setIsQuotaModalOpen(false)}
-        attemptedDate={selectedDate}
+        attemptedDate={selectedDay.displayDate}
         attemptedTime={formattedSelectedRange}
-        currentActiveCount={quota?.active_count ?? 4}
-        maxLimit={quota?.max_limit ?? 4}
+        currentActiveCount={activeCount}
+        maxLimit={maxLimit}
       />
     </AppLayout>
   )

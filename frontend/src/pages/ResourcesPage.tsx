@@ -47,7 +47,7 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     accessLabel: "Acces AIA",
     buttonLabel: "Rezervă resursa",
     imageUrl: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/reservations/new?resursa=1",
+    targetPath: "/resources/1",
   },
   {
     id: 2,
@@ -63,7 +63,7 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     availabilityNote: "Disponibil: 23.10.2026 · 10:00–12:00",
     buttonLabel: "Rezervă resursa",
     imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/reservations/new?resursa=2",
+    targetPath: "/resources/2",
   },
   {
     id: 3,
@@ -95,7 +95,7 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     restrictedBanner: "Restricționat · Necesită aprobare cadru didactic",
     buttonLabel: "Cere aprobare CD",
     imageUrl: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/reservations/new?resursa=4",
+    targetPath: "/resources/4",
   },
   {
     id: 5,
@@ -111,7 +111,7 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
     restrictedBanner: "Restricționat · Necesită aprobare cadru didactic",
     buttonLabel: "Cere aprobare CD",
     imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
-    targetPath: "/reservations/new?resursa=5",
+    targetPath: "/resources/5",
   },
 ]
 
@@ -144,10 +144,7 @@ export function ResourcesPage() {
               return {
                 ...card,
                 id: matched.id,
-                targetPath:
-                  card.statusBadge === "În utilizare"
-                    ? `/resources/${matched.id}`
-                    : `/reservations/new?resursa=${matched.id}`,
+                targetPath: `/resources/${matched.id}`,
               }
             })
           )
