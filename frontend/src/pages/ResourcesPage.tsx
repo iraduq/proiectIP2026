@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
+import { resourcesApi } from "../api/resources"
 import {
   Search,
   SlidersHorizontal,
@@ -117,6 +118,7 @@ const CATALOG_ITEMS: CatalogCardItem[] = [
 export function ResourcesPage() {
   const navigate = useNavigate()
 
+  const [items, setItems] = useState<CatalogCardItem[]>(CATALOG_ITEMS)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("toate")
   const [deptFilter, setDeptFilter] = useState("toate")
@@ -124,6 +126,35 @@ export function ResourcesPage() {
   const [statusFilter, setStatusFilter] = useState("toate")
   const [maxDuration, setMaxDuration] = useState(4)
   const [sortBy, setSortBy] = useState("Specializare")
+
+  useEffect(() => {
+    resourcesApi
+      .getResources({ limit: 50 })
+      .then((res) => {
+        if (res.items && res.items.length > 0) {
+          setItems((prev) =>
+            prev.map((card, idx) => {
+              const matched =
+                res.items.find(
+                  (dbItem) =>
+                    dbItem.cod_inventar === card.code ||
+                    dbItem.nume.toLowerCase().includes(card.name.split(" ")[0].toLowerCase())
+                ) || res.items[idx]
+              if (!matched) return card
+              return {
+                ...card,
+                id: matched.id,
+                targetPath:
+                  card.statusBadge === "În utilizare"
+                    ? `/resources/${matched.id}`
+                    : `/reservations/new?resursa=${matched.id}`,
+              }
+            })
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const handleResetFilters = () => {
     setSearch("")
@@ -134,7 +165,7 @@ export function ResourcesPage() {
     setMaxDuration(4)
   }
 
-  const filteredItems = CATALOG_ITEMS.filter((item) => {
+  const filteredItems = items.filter((item) => {
     const q = search.trim().toLowerCase()
     if (
       q &&
