@@ -469,7 +469,15 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
     prof1 = (await db.execute(select(User).where(User.email == "prof1@univ.ro"))).scalars().first()
     lab1 = (await db.execute(select(User).where(User.email == "lab1@univ.ro"))).scalars().first()
 
-    # 2. Resources
+    bind = db.get_bind()
+    if bind and bind.dialect.name == "postgresql":
+        try:
+            from sqlalchemy import text
+            await db.execute(text("ALTER TABLE resurse ADD COLUMN IF NOT EXISTS imagine_url VARCHAR(500)"))
+            await db.commit()
+        except Exception:
+            await db.rollback()
+
     resources_data = [
         {
             "nume": "Stație Grafică Deep Learning RTX 4090",
@@ -479,6 +487,7 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "stare": StareTehnica.DISPONIBILA,
             "desc": "Stație dedicată prelucrării de imagini și modele AI.",
             "specs": "Intel Core i9 14900K, 128GB DDR5 5600MHz, Dual Nvidia GeForce RTX 4090 24GB, 4TB NVMe SSD.",
+            "imagine_url": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=800&q=80",
         },
         {
             "nume": "Cluster GPU Deep Learning 8x A100",
@@ -486,8 +495,9 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "cat": "Calculatoare & Servere HPC",
             "room_idx": 1 % len(rooms),
             "stare": StareTehnica.DISPONIBILA,
-            "desc": "Nod cluster pentru antrenare paralelă LLM și simulări masive.",
+            "desc": "Nod cluster pentru antrenare paralelă LLM ?i simulări masive.",
             "specs": "8x Nvidia A100 80GB SXM4, 1024GB RAM ECC, 30TB NVMe RAID-0, Interfață 200Gb/s InfiniBand.",
+            "imagine_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
         },
         {
             "nume": "Braț Robotic Universal Robots UR3e",
@@ -497,6 +507,7 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "stare": StareTehnica.DISPONIBILA,
             "desc": "Braț robotic colaborativ cu 6 grade de libertate pentru cercetare aplicată.",
             "specs": "Rază de acțiune 500mm, sarcină utilă 3kg, precizie +/-0.03mm, senzor integrat de forță și cuplu.",
+            "imagine_url": "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=800&q=80",
         },
         {
             "nume": "Platformă Mobilă Cercetare TurtleBot 4 Pro",
@@ -504,8 +515,9 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "cat": "Robotică & Sisteme Autonome",
             "room_idx": 3 % len(rooms),
             "stare": StareTehnica.IN_MENTENANTA,
-            "desc": "Platformă mobilă autonomă pentru mapare SLAM și navigație autonomă ROS 2.",
+            "desc": "Platform? mobil? autonomă pentru mapare SLAM ?i navigație autonomă ROS 2.",
             "specs": "Bază mecanică iRobot Create 3, SBC Raspberry Pi 4 4GB, LiDAR 2D RPLIDAR A1M8, Cameră OAK-D-Pro.",
+            "imagine_url": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80",
         },
         {
             "nume": "Osciloscop Digital Keysight InfiniiVision 1GHz",
@@ -514,7 +526,8 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "room_idx": 4 % len(rooms),
             "stare": StareTehnica.DISPONIBILA,
             "desc": "Osciloscop digital de înaltă precizie pentru semnale rapide.",
-            "specs": "4 canale analogice, lățime bandă 1 GHz, rată eșantionare 5 GSa/s, decodoare I2C/SPI/CAN/LIN.",
+            "specs": "4 canale analogice, l??ime band? 1 GHz, rată eșantionare 5 GSa/s, decodoare I2C/SPI/CAN/LIN.",
+            "imagine_url": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80",
         },
         {
             "nume": "Analizor de Spectru Rohde & Schwarz FPC1500",
@@ -522,8 +535,9 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "cat": "Aparatură Măsură & Osciloscoape",
             "room_idx": 5 % len(rooms),
             "stare": StareTehnica.DEFECTA,
-            "desc": "Analizor de spectru cu funcție de generator de urmărire și analizor rețea vectorial.",
+            "desc": "Analizor de spectru cu funcție de generator de urm?rire ?i analizor rețea vectorial.",
             "specs": "Gama frecvențe 5 kHz până la 3 GHz, zgomot de fond -165 dBm, ecran color WXGA 10.1 inch.",
+            "imagine_url": "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=800&q=80",
         },
         {
             "nume": "Kit Dezvoltare FPGA Xilinx Zynq UltraScale+",
@@ -531,17 +545,59 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
             "cat": "Kituri IoT & Sisteme Embedded",
             "room_idx": 6 % len(rooms),
             "stare": StareTehnica.DISPONIBILA,
-            "desc": "Platformă de calcul eterogen pentru procesare semnal și inteligență artificială edge.",
+            "desc": "Platform? de calcul eterogen pentru procesare semnal ?i inteligență artificială edge.",
             "specs": "Quad-core ARM Cortex-A53, Dual Cortex-R5F, FPGA UltraScale+ 256k logic cells, 4GB DDR4.",
+            "imagine_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
         },
         {
-            "nume": "Imprimantă 3D Bambu Lab X1-Carbon Combo",
+            "nume": "Imprimant? 3D Bambu Lab X1-Carbon Combo",
             "cod": "PRT-BAMBU-X1C",
-            "cat": "Imprimare 3D & Prototipare Rapidă",
+            "cat": "Imprimare 3D & Prototipare Rapid?",
             "room_idx": 7 % len(rooms),
             "stare": StareTehnica.DISPONIBILA,
-            "desc": "Imprimantă 3D rapidă de înaltă rezoluție cu cameră închisă pentru filamente tehnice.",
+            "desc": "Imprimant? 3D rapid? de înaltă rezolu?ie cu cameră închisă pentru filamente tehnice.",
             "specs": "Volum 256x256x256mm, sistem automat AMS 4 materiale, viteză până la 500mm/s, senzor dual LiDAR.",
+            "imagine_url": "https://images.unsplash.com/photo-1631556097152-c39479cbfeab?auto=format&fit=crop&w=800&q=80",
+        },
+        {
+            "nume": "Braț Robotic Educațional Niryo Ned 2",
+            "cod": "ROB-NIRYO-NED2",
+            "cat": "Robotică & Sisteme Autonome",
+            "room_idx": 0,
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Braț robotic colaborativ cu 6 axe bazat pe ROS ?i Python pentru educație și prototipare.",
+            "specs": "6 grade de libertate, repetabilitate 0.5mm, sarcină utilă 300g, prindere cu vacuum ?i electromagnet.",
+            "imagine_url": "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=800&q=80",
+        },
+        {
+            "nume": "Kit NVIDIA Jetson Orin Nano Dev Kit",
+            "cod": "IOT-JETSON-ORIN",
+            "cat": "Kituri IoT & Sisteme Embedded",
+            "room_idx": 1 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Modul AI de calcul la margine cu performanță de până la 40 TOPS pentru viziune artificială.",
+            "specs": "GPU Ampere cu 1024 nuclee ?i 32 nuclee Tensor, CPU ARM Cortex-A78AE 6 nuclee, 8GB LPDDR5.",
+            "imagine_url": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80",
+        },
+        {
+            "nume": "Osciloscop Digital Rohde & Schwarz RTB2004",
+            "cod": "MS-RS-RTB2004",
+            "cat": "Aparatură Măsură & Osciloscoape",
+            "room_idx": 2 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Osciloscop 4 canale cu ecran tactil capacitiv de 10.1 inch ?i convertor A/D pe 10 biți.",
+            "specs": "Lățime bandă 300 MHz, ADC 10 biți, rată eșantionare 2.5 GSa/s, memorie 20 Msample.",
+            "imagine_url": "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
+        },
+        {
+            "nume": "Workstation AI Deep Learning",
+            "cod": "HPC-AI-WS-01",
+            "cat": "Calculatoare & Servere HPC",
+            "room_idx": 3 % len(rooms),
+            "stare": StareTehnica.DISPONIBILA,
+            "desc": "Sta?ie dedicat? antren?rii modelelor de ?nv??are profund? ?i simulărilor numerice complexe.",
+            "specs": "AMD Threadripper PRO 5975WX 32-core, 256GB ECC DDR4, 2x Nvidia RTX 6000 Ada 48GB, 8TB NVMe.",
+            "imagine_url": "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?auto=format&fit=crop&w=800&q=80",
         },
     ]
 
@@ -550,7 +606,7 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
         existing = (await db.execute(select(Resource).where(Resource.cod_inventar == r_data["cod"]))).scalars().first()
         if not existing:
             cat = cat_map.get(r_data["cat"])
-            room = rooms[r_data["room_idx"]]
+            room = rooms[r_data["room_idx"] % len(rooms)]
             res = Resource(
                 nume=r_data["nume"],
                 cod_inventar=r_data["cod"],
@@ -559,12 +615,15 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
                 stare_tehnica=r_data["stare"],
                 descriere=r_data["desc"],
                 specificatii=r_data["specs"],
+                imagine_url=r_data.get("imagine_url"),
                 is_active=True,
             )
             db.add(res)
             await db.flush()
             res_map[r_data["cod"]] = res
         else:
+            if r_data.get("imagine_url"):
+                existing.imagine_url = r_data["imagine_url"]
             res_map[r_data["cod"]] = existing
 
     # 3. Reservations

@@ -283,3 +283,16 @@ async def test_resource_availability_endpoint(client: AsyncClient, db_session: A
     assert len(data["zile"]) == 5
     assert len(data["zile"][0]["slots"]) == 10
     assert data["zile"][0]["slots"][0]["status"] in ["LIBER", "OCUPAT", "MENTENANTA"]
+
+@pytest.mark.asyncio
+async def test_resource_image_url_population(client: AsyncClient, db_session: AsyncSession) -> None:
+    await seed_all(db_session)
+    student_token = await get_auth_token(client, "student1@univ.ro")
+    headers = {"Authorization": f"Bearer {student_token}"}
+
+    res_list = await client.get("/api/resources?limit=20", headers=headers)
+    assert res_list.status_code == 200
+    items = res_list.json()["items"]
+    assert len(items) > 0
+    with_images = [item for item in items if item.get("imagine_url")]
+    assert len(with_images) > 0

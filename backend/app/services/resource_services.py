@@ -61,6 +61,7 @@ class ResourceService:
             stare_tehnica=res.stare_tehnica,
             descriere=res.descriere,
             specificatii=res.specificatii,
+            imagine_url=res.imagine_url,
             is_active=res.is_active,
             created_at=res.created_at,
             updated_at=res.updated_at,
@@ -150,6 +151,7 @@ class ResourceService:
             descriere=data.descriere.strip() if data.descriere else None,
             specificatii=data.specificatii.strip() if data.specificatii else None,
             stare_tehnica=data.stare_tehnica,
+            imagine_url=data.imagine_url,
             is_active=True,
         )
         await resource_repository.add(db, res)
@@ -239,6 +241,8 @@ class ResourceService:
             else:
                 res.stare_tehnica = stare_noua
 
+        if "imagine_url" in changes:
+            res.imagine_url = changes["imagine_url"]
         if "is_active" in changes and changes["is_active"] is not None:
             res.is_active = changes["is_active"]
 

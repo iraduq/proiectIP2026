@@ -46,6 +46,7 @@ class ResourceCreate(BaseModel):
     descriere: Optional[str] = Field(None, max_length=500)
     specificatii: Optional[str] = Field(None, max_length=1000)
     stare_tehnica: StareTehnica = StareTehnica.DISPONIBILA
+    imagine_url: Optional[str] = Field(None, max_length=500)
 
 
 class ResourceUpdate(BaseModel):
@@ -56,6 +57,7 @@ class ResourceUpdate(BaseModel):
     descriere: Optional[str] = Field(None, max_length=500)
     specificatii: Optional[str] = Field(None, max_length=1000)
     stare_tehnica: Optional[StareTehnica] = None
+    imagine_url: Optional[str] = Field(None, max_length=500)
     is_active: Optional[bool] = None
 
 
@@ -79,6 +81,7 @@ class ResourceResponse(BaseModel):
     stare_tehnica: StareTehnica
     descriere: Optional[str] = None
     specificatii: Optional[str] = None
+    imagine_url: Optional[str] = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
