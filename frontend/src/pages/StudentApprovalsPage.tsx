@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
-import { useAuth } from "../context/AuthContext"
 import { reservationsApi } from "../api/reservations"
-import {
-  CheckCircle2,
-  AlertCircle,
-  X,
-} from "lucide-react"
+import { CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Badge } from "../components/ui/badge"
 import { Card } from "../components/ui/card"
+import { Textarea } from "../components/ui/textarea"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "../components/ui/sheet"
 
 interface ApprovalItem {
   id: number
@@ -39,12 +43,12 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
     purpose: "Proiect de licență",
     dateStr: "26.10.2026",
     timeRange: "10:00–12:00",
-    imageUrl: "https://images.unsplash.com/photo-1631556097152-c39479cbfeab?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
     status: "IN_ASTEPTARE",
   },
   {
     id: 102,
-    studentName: "Mircea Marius",
+    studentName: "Marius Mitica",
     studentDetail: "Calculatoare · Anul IV",
     resourceName: "Braț Robotic Educațional Niryo Ned 2",
     inventoryCode: "INV-USV-2026-088",
@@ -52,13 +56,13 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
     purpose: "Proiect de robotică",
     dateStr: "27.10.2026",
     timeRange: "12:00–14:00",
-    imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=900&q=80",
     status: "IN_ASTEPTARE",
     isDemo: true,
   },
   {
     id: 103,
-    studentName: "Stelica Vali",
+    studentName: "Gica Hagi",
     studentDetail: "AIA · Anul II",
     resourceName: "Osciloscop Digital Rohde & Schwarz RTB2004",
     inventoryCode: "INV-USV-2026-215",
@@ -66,20 +70,18 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
     purpose: "Măsurători de laborator",
     dateStr: "28.10.2026",
     timeRange: "10:00–12:00",
-    imageUrl: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=900&q=80",
     status: "IN_ASTEPTARE",
     isDemo: true,
   },
 ]
 
 export function StudentApprovalsPage() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
   const [searchParams] = useSearchParams()
 
   const [activeTab, setActiveTab] = useState<"pending" | "resolved">("pending")
   const [requests, setRequests] = useState<ApprovalItem[]>(INITIAL_DEMO_REQUESTS)
-  const [selectedId, setSelectedId] = useState<number>(101)
+  const [selectedId, setSelectedId] = useState<number | null>(101)
   const [rejectionReason, setRejectionReason] = useState<string>("")
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -98,30 +100,33 @@ export function StudentApprovalsPage() {
   const loadRealPending = async () => {
     try {
       const res = await reservationsApi.getReservations({ stare: "IN_ASTEPTARE", limit: 20 })
-      if (res && res.items.length > 0) {
-        const mapped: ApprovalItem[] = res.items.map((item) => ({
-          id: item.id,
-          studentName: item.utilizator_nume || "Student",
-          studentDetail: item.numar_matricol || item.utilizator_email || "Student",
-          resourceName: item.resursa_nume || "Echipament laborator",
-          inventoryCode: item.resursa_cod || "INV-USV",
-          roomName: item.sala_nume || "Laborator",
-          purpose: item.scop,
-          dateStr: item.data_inceput ? item.data_inceput.split("T")[0] : "2026-10-26",
-          timeRange: `${item.data_inceput ? item.data_inceput.substring(11, 16) : "10:00"}–${
-            item.data_sfarsit ? item.data_sfarsit.substring(11, 16) : "12:00"
-          }`,
-          imageUrl: "https://images.unsplash.com/photo-1631556097152-c39479cbfeab?auto=format&fit=crop&w=800&q=80",
-          status: "IN_ASTEPTARE",
-        }))
-
-        setRequests((prev) => {
-          const existingIds = new Set(mapped.map((m) => m.id))
-          const remainingDemo = prev.filter((p) => !existingIds.has(p.id))
-          return [...mapped, ...remainingDemo]
+      if (res.items && res.items.length > 0) {
+        const mapped: ApprovalItem[] = res.items.map((item) => {
+          const dStart = new Date(item.data_inceput)
+          const dEnd = new Date(item.data_sfarsit)
+          const dateFormatted = dStart.toLocaleDateString("ro-RO", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })
+          const tStart = dStart.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })
+          const tEnd = dEnd.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })
+          return {
+            id: item.id,
+            studentName: item.utilizator_nume || "Radu Ivan",
+            studentDetail: "Student · USV",
+            resourceName: item.resursa_nume || "Echipament de laborator",
+            inventoryCode: item.resursa_cod || "INV-USV-2026-041",
+            roomName: item.sala_nume || "Lab Prototipare",
+            purpose: item.scop || "Proiect de licență",
+            dateStr: dateFormatted,
+            timeRange: `${tStart}–${tEnd}`,
+            imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80",
+            status: "IN_ASTEPTARE",
+          }
         })
-
-        if (mapped.length > 0) {
+        setRequests([...mapped, ...INITIAL_DEMO_REQUESTS.slice(1)])
+        if (!searchParams.get("id")) {
           setSelectedId(mapped[0].id)
         }
       }
@@ -129,7 +134,8 @@ export function StudentApprovalsPage() {
     }
   }
 
-  const selectedRequest = requests.find((r) => r.id === selectedId) || requests[0]
+  const selectedRequest =
+    selectedId !== null ? requests.find((r) => r.id === selectedId) || null : null
 
   const handleApprove = async (id: number) => {
     setActionError(null)
@@ -140,8 +146,10 @@ export function StudentApprovalsPage() {
       setRequests((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status: "APROBATA" } : r))
       )
-      setActionSuccess("Cererea de acces a fost aprobată cu succes.")
+      setActionSuccess("Accesul la resursă a fost aprobat cu succes.")
       setRejectionReason("")
+      const remaining = requests.filter((r) => r.id !== id && r.status === "IN_ASTEPTARE")
+      setSelectedId(remaining.length > 0 ? remaining[0].id : null)
     } catch (err: any) {
       setActionError(err.response?.data?.detail || "Eroare la aprobarea cererii.")
     }
@@ -164,6 +172,8 @@ export function StudentApprovalsPage() {
       )
       setActionSuccess("Cererea a fost respinsă și studentul a fost notificat.")
       setRejectionReason("")
+      const remaining = requests.filter((r) => r.id !== id && r.status === "IN_ASTEPTARE")
+      setSelectedId(remaining.length > 0 ? remaining[0].id : null)
     } catch (err: any) {
       setActionError(err.response?.data?.detail || "Eroare la respingerea cererii.")
     }
@@ -175,7 +185,7 @@ export function StudentApprovalsPage() {
 
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Aprobări studenți"]}>
-      <div className="space-y-6 max-w-7xl mx-auto w-full">
+      <div className="max-w-3xl space-y-6">
         {actionSuccess && (
           <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
@@ -196,233 +206,239 @@ export function StudentApprovalsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-7 space-y-5">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-neutral-900">
-                  Aprobări studenți
-                </h1>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-black text-white">
-                  {pendingList.length} în așteptare
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500">
-                Verifică scopul și acordă acces la resursele solicitate. Decizia nu creează o rezervare.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setActiveTab("pending")}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                  activeTab === "pending"
-                    ? "bg-neutral-200/80 text-neutral-900"
-                    : "text-neutral-500 hover:text-black hover:bg-neutral-100"
-                }`}
-              >
-                În așteptare ({pendingList.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("resolved")}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                  activeTab === "resolved"
-                    ? "bg-neutral-200/80 text-neutral-900"
-                    : "text-neutral-500 hover:text-black hover:bg-neutral-100"
-                }`}
-              >
-                Soluționate
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {displayedList.length === 0 ? (
-                <div className="p-8 text-center text-xs text-neutral-400 bg-white border border-neutral-200 rounded-2xl">
-                  Nu există cereri în această secțiune.
-                </div>
-              ) : (
-                displayedList.map((req) => {
-                  const isSelected = req.id === selectedRequest?.id
-                  return (
-                    <div
-                      key={req.id}
-                      onClick={() => setSelectedId(req.id)}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer bg-white space-y-2.5 ${
-                        isSelected
-                          ? "border-neutral-400 shadow-xs"
-                          : "border-neutral-200 hover:border-neutral-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-neutral-900">{req.studentName}</span>
-                        <span className="text-[11px] text-neutral-400">
-                          {isSelected ? "Selectată" : req.isDemo ? "Exemplu UI" : req.dateStr}
-                        </span>
-                      </div>
-
-                      <div className="space-y-0.5">
-                        <div className="font-semibold text-xs text-neutral-900">
-                          {req.resourceName}
-                        </div>
-                        <div className="text-[11px] text-neutral-400 font-mono">
-                          {req.inventoryCode} · {req.roomName}
-                        </div>
-                        <div className="text-[11px] text-neutral-500 pt-0.5">
-                          <span>Scop: </span>
-                          <span>{req.purpose}</span>
-                        </div>
-                        <div className="text-[11px] text-neutral-500">
-                          <span>Interval: </span>
-                          <span>{req.dateStr} · {req.timeRange}</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-1 flex items-center gap-2">
-                        {isSelected ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-50"
-                          >
-                            Cerere deschisă
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleApprove(req.id)
-                            }}
-                            className="h-7 text-xs bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-50"
-                          >
-                            Aprobă
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedId(req.id)
-                          }}
-                          className="h-7 text-xs text-neutral-600 hover:text-black hover:bg-neutral-50"
-                        >
-                          Respinge cu motiv
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-
-              <div className="pt-2 text-[11px] text-neutral-400 text-center leading-snug">
-                Solicitanții demonstrativi sunt exemple de interfață; nu reprezintă persoane reale.
-              </div>
-            </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+              Aprobări studenți
+            </h1>
+            <Badge className="rounded-full bg-black hover:bg-black text-white text-[11px] font-semibold px-2.5 py-0.5 border-transparent">
+              {pendingList.length} în așteptare
+            </Badge>
           </div>
+          <p className="text-xs text-neutral-500">
+            Verifică scopul și acordă acces la resursele solicitate. Decizia nu creează o rezervare.
+          </p>
+        </div>
 
-          <div className="lg:col-span-5">
-            {selectedRequest ? (
-              <Card className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-xs space-y-4">
-                <div className="flex items-start justify-between border-b border-neutral-100 pb-3">
-                  <div>
-                    <h2 className="text-sm font-bold text-neutral-900">Examinează cererea</h2>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">Acces la resursă · cerere în așteptare</p>
+        <div className="inline-flex items-center rounded-lg bg-neutral-100 p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("pending")}
+            className={`px-3 py-1 text-xs rounded-md transition-all ${
+              activeTab === "pending"
+                ? "bg-white text-neutral-900 font-semibold shadow-xs"
+                : "text-neutral-500 hover:text-neutral-900 font-medium"
+            }`}
+          >
+            În așteptare ({pendingList.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("resolved")}
+            className={`px-3 py-1 text-xs rounded-md transition-all ${
+              activeTab === "resolved"
+                ? "bg-white text-neutral-900 font-semibold shadow-xs"
+                : "text-neutral-500 hover:text-neutral-900 font-medium"
+            }`}
+          >
+            Soluționate
+          </button>
+        </div>
+
+        <div className="divide-y divide-neutral-200">
+          {displayedList.length === 0 ? (
+            <Card className="p-8 text-center text-xs text-neutral-400 bg-white border-neutral-200 rounded-xl shadow-none">
+              Nu există cereri în această secțiune.
+            </Card>
+          ) : (
+            displayedList.map((req) => {
+              const isSelected = req.id === selectedRequest?.id
+              return (
+                <div
+                  key={req.id}
+                  onClick={() => setSelectedId(req.id)}
+                  className="py-5 first:pt-2 space-y-3 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-neutral-900">{req.studentName}</span>
+                    <Badge
+                      variant="outline"
+                      className="rounded-full border-neutral-200 bg-neutral-100/80 text-neutral-600 text-[11px] font-medium px-2.5 py-0.5"
+                    >
+                      {isSelected ? "Selectată" : req.isDemo ? "Exemplu UI" : req.dateStr}
+                    </Badge>
                   </div>
-                  <button onClick={() => navigate("/professor")} className="text-neutral-400 hover:text-neutral-600">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
 
-                <div className="flex items-center justify-between text-xs">
-                  <Badge variant="secondary" className="bg-neutral-100 text-neutral-800 text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                  <Card className="rounded-xl border-neutral-200 bg-neutral-50/40 p-4 shadow-none space-y-0.5">
+                    <div className="font-medium text-xs text-neutral-900">
+                      {req.resourceName}
+                    </div>
+                    <div className="text-[11px] text-neutral-500">
+                      {req.inventoryCode} · {req.roomName}
+                    </div>
+                    <div className="text-[11px] text-neutral-500">
+                      Scop: {req.purpose}
+                    </div>
+                    <div className="text-[11px] text-neutral-500">
+                      Interval: {req.dateStr} · {req.timeRange}
+                    </div>
+                  </Card>
+
+                  <div className="flex items-center gap-2">
+                    {isSelected ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedId(req.id)
+                        }}
+                        className="h-8 rounded-lg border-neutral-200 bg-neutral-100/90 text-neutral-800 hover:bg-neutral-200/70 text-xs font-semibold px-3"
+                      >
+                        Cerere deschisă
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleApprove(req.id)
+                        }}
+                        className="h-8 rounded-lg border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold px-3"
+                      >
+                        Aprobă
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedId(req.id)
+                      }}
+                      className="h-8 rounded-lg border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold px-3"
+                    >
+                      Respinge cu motiv
+                    </Button>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        <p className="text-[11px] text-neutral-400">
+          Solicitanții demonstrativi sunt exemple de interfață; nu reprezintă persoane reale.
+        </p>
+      </div>
+
+      <Sheet
+        open={Boolean(selectedRequest)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null)
+        }}
+      >
+        <SheetContent side="right">
+          {selectedRequest && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Examinează cererea</SheetTitle>
+                <SheetDescription>Acces la resursă · cerere în așteptare</SheetDescription>
+              </SheetHeader>
+
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                <div className="flex items-center justify-between">
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-neutral-200 bg-neutral-50 text-neutral-800 text-[11px] font-medium px-2.5 py-0.5"
+                  >
                     În așteptare
                   </Badge>
-                  <span className="text-[11px] text-neutral-400">22 octombrie 2026</span>
+                  <span className="text-xs text-neutral-400">22 octombrie 2026</span>
                 </div>
 
-                <div className="rounded-xl overflow-hidden h-44 bg-neutral-900 border border-neutral-200">
-                  <img
-                    src={selectedRequest.imageUrl}
-                    alt={selectedRequest.resourceName}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="px-4">
+                  <div className="overflow-hidden rounded-md bg-neutral-100 h-44">
+                    <img
+                      src={selectedRequest.imageUrl}
+                      alt={selectedRequest.resourceName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="font-bold text-sm text-neutral-900 leading-tight">
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-neutral-900 leading-snug">
                     {selectedRequest.resourceName}
                   </h3>
-                  <div className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                  <p className="text-xs text-neutral-500">
                     {selectedRequest.inventoryCode} · {selectedRequest.roomName}
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <span className="block text-[11px] text-neutral-400">Student</span>
+                    <span className="block text-xs font-medium text-neutral-900 mt-0.5">
+                      {selectedRequest.studentName}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="block text-[11px] text-neutral-400">Scopul solicitării</span>
+                    <span className="block text-xs font-medium text-neutral-900 mt-0.5">
+                      {selectedRequest.purpose}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="block text-[11px] text-neutral-400">Interval solicitat</span>
+                    <span className="block text-xs font-medium text-neutral-900 mt-0.5">
+                      {selectedRequest.dateStr} · {selectedRequest.timeRange}
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-1 text-xs">
-                  <div>
-                    <span className="text-[11px] text-neutral-400 block mb-0.5">Student</span>
-                    <span className="font-semibold text-neutral-900">{selectedRequest.studentName}</span>
+                {selectedRequest.status === "IN_ASTEPTARE" && (
+                  <div className="space-y-2 pt-1">
+                    <label className="block text-xs font-bold text-neutral-900">
+                      Motivul respingerii
+                    </label>
+                    <Textarea
+                      rows={3}
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Scrie motivul pentru student..."
+                    />
+                    <p className="text-[11px] text-neutral-400 leading-snug">
+                      Obligatoriu pentru „Respinge cu motiv”. Nu este necesar pentru aprobare.
+                    </p>
                   </div>
+                )}
+              </div>
 
-                  <div>
-                    <span className="text-[11px] text-neutral-400 block mb-0.5">Scopul solicitării</span>
-                    <span className="font-semibold text-neutral-900">{selectedRequest.purpose}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] text-neutral-400 block mb-0.5">Interval solicitat</span>
-                    <span className="font-semibold text-neutral-900">{selectedRequest.dateStr} · {selectedRequest.timeRange}</span>
-                  </div>
-
-                  {selectedRequest.status === "RESPINSA" && selectedRequest.rejectionReason && (
-                    <div>
-                      <span className="text-[11px] text-rose-500 block mb-0.5">Motivul respingerii</span>
-                      <span className="text-xs text-rose-700 bg-rose-50 p-2.5 rounded-lg border border-rose-100 block">
-                        {selectedRequest.rejectionReason}
-                      </span>
-                    </div>
-                  )}
-
-                  {selectedRequest.status === "IN_ASTEPTARE" && (
-                    <div className="space-y-1.5 pt-1">
-                      <label className="block text-xs font-semibold text-neutral-900">
-                        Motivul respingerii
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        placeholder="Scrie motivul pentru student…"
-                        className="w-full text-xs p-3 rounded-xl border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black resize-none placeholder:text-neutral-400"
-                      />
-                      <p className="text-[10px] text-neutral-400 leading-snug">
-                        Obligatoriu pentru „Respinge cu motiv”. Nu este necesar pentru aprobare.
-                      </p>
-
-                      <div className="pt-2 space-y-2">
-                        <Button
-                          onClick={() => handleApprove(selectedRequest.id)}
-                          className="w-full bg-black hover:bg-neutral-800 text-white text-xs h-10 rounded-xl font-semibold shadow-xs"
-                        >
-                          Aprobă accesul
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleReject(selectedRequest.id)}
-                          className="w-full border-neutral-300 text-neutral-900 hover:bg-neutral-50 text-xs h-10 rounded-xl font-medium"
-                        >
-                          Respinge cu motiv
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ) : null}
-          </div>
-        </div>
-      </div>
+              {selectedRequest.status === "IN_ASTEPTARE" && (
+                <SheetFooter>
+                  <Button
+                    onClick={() => handleApprove(selectedRequest.id)}
+                    className="w-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold h-9 rounded-lg"
+                  >
+                    Aprobă accesul
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleReject(selectedRequest.id)}
+                    className="w-full border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 text-xs font-semibold h-9 rounded-lg"
+                  >
+                    Respinge cu motiv
+                  </Button>
+                </SheetFooter>
+              )}
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </AppLayout>
   )
 }
