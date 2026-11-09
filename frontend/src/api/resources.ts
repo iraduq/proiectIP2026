@@ -1,5 +1,5 @@
 import { api } from "./client"
-import type { Page, Resource, StareTehnica } from "../types"
+import type { Page, Resource, ResourceAvailability, StareTehnica } from "../types"
 
 export interface ResourceFilterParams {
   categorie_id?: number
@@ -32,6 +32,14 @@ export const resourcesApi = {
 
   async getResource(id: number): Promise<Resource> {
     const res = await api.get<Resource>(`/resources/${id}`)
+    return res.data
+  },
+
+  async getAvailability(
+    id: number,
+    params?: { start_date?: string; days_count?: number }
+  ): Promise<ResourceAvailability> {
+    const res = await api.get<ResourceAvailability>(`/resources/${id}/availability`, { params })
     return res.data
   },
 
