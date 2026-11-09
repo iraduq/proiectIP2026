@@ -83,7 +83,7 @@ export function RoomsPage() {
         const [instRes, facRes, deptRes] = await Promise.all([
           academicApi.getInstitutions({ limit: 100 }),
           academicApi.getFaculties({ limit: 100 }),
-          academicApi.getDepartments({ limit: 200 }),
+          academicApi.getDepartments({ limit: 100 }),
         ])
         setInstitutions(instRes.items)
         setFaculties(facRes.items)

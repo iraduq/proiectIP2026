@@ -121,7 +121,11 @@ export function ResourcesPage() {
           </div>
 
           <Button
-            onClick={() => navigate("/resources/1")}
+            onClick={() => {
+              const el = document.getElementById("catalog-search-input")
+              el?.focus()
+              el?.scrollIntoView({ behavior: "smooth", block: "center" })
+            }}
             className="bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold h-9 px-4 rounded-lg gap-1.5 shrink-0"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -133,6 +137,7 @@ export function ResourcesPage() {
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
             <Input
+              id="catalog-search-input"
               type="text"
               placeholder="Caută după nume sau cod resursă..."
               value={search}
