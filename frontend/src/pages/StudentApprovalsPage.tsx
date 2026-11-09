@@ -358,14 +358,12 @@ export function StudentApprovalsPage() {
                   <span className="text-xs text-neutral-400">22 octombrie 2026</span>
                 </div>
 
-                <div className="px-4">
-                  <div className="overflow-hidden rounded-md bg-neutral-100 h-44">
-                    <img
-                      src={selectedRequest.imageUrl}
-                      alt={selectedRequest.resourceName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                <div className="overflow-hidden rounded-lg bg-neutral-100 h-52">
+                  <img
+                    src={selectedRequest.imageUrl}
+                    alt={selectedRequest.resourceName}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
                 <div className="space-y-1">
