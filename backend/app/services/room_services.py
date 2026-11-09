@@ -136,11 +136,16 @@ class RoomService:
         effective_institutie_id = institutie_id
 
         if is_student(actor):
-            if actor.facultate_id is None:
+            student_fac_id = actor.facultate_id
+            if student_fac_id is None:
+                default_facs, _ = await faculty_repository.list_page(db, None, None, True, 0, 1)
+                if default_facs:
+                    student_fac_id = default_facs[0].id
+            if student_fac_id is None:
                 return Page.build([], 0, skip, limit)
-            if facultate_id is not None and facultate_id != actor.facultate_id:
+            if facultate_id is not None and facultate_id != student_fac_id:
                 return Page.build([], 0, skip, limit)
-            effective_facultate_id = actor.facultate_id
+            effective_facultate_id = student_fac_id
             if actor.faculty:
                 if institutie_id is not None and institutie_id != actor.faculty.institutie_id:
                     return Page.build([], 0, skip, limit)

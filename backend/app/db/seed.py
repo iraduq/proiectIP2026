@@ -357,6 +357,14 @@ async def seed_academic_structure(db: AsyncSession) -> None:
     existing_codes = set((await db.execute(select(Institution.cod))).scalars().all())
     pending = [seed for seed in INSTITUTION_SEEDS if seed["cod"] not in existing_codes]
     if not pending:
+        first_fac = (await db.execute(select(Faculty).order_by(Faculty.id.asc()))).scalars().first()
+        if first_fac and UserRole.STUDENT.value in role_ids:
+            await db.execute(
+                update(User)
+                .where(User.role_id == role_ids[UserRole.STUDENT.value], User.facultate_id.is_(None))
+                .values(facultate_id=first_fac.id)
+            )
+            await db.commit()
         return
 
     existing_users = {
