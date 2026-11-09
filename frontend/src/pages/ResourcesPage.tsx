@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
@@ -34,6 +35,7 @@ import { Input } from "../components/ui/input"
 import { Badge } from "../components/ui/badge"
 
 export function ResourcesPage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
 
   const [resources, setResources] = useState<Resource[]>([])
@@ -592,7 +594,13 @@ export function ResourcesPage() {
                         {res.cod_inventar}
                       </td>
                       <td className="py-3.5 px-4 max-w-xs">
-                        <div className="font-medium text-neutral-900 leading-snug">{res.nume}</div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/resources/${res.id}`)}
+                          className="font-medium text-neutral-900 leading-snug hover:underline text-left block"
+                        >
+                          {res.nume}
+                        </button>
                         {res.specificatii && (
                           <div className="text-[11px] text-neutral-500 truncate mt-0.5">
                             {res.specificatii}
