@@ -87,18 +87,17 @@ export function NewReservationPage() {
   const resParam = searchParams.get("resursa") || "1"
 
   const [dbResource, setDbResource] = useState<Resource | null>(null)
-  const [allResources, setAllResources] = useState<Resource[]>([])
   const [quota, setQuota] = useState<StudentQuota>({
     active_count: 0,
     max_limit: 4,
     can_reserve: true,
     active_reservations: [],
   })
-  const [bookingDate, setBookingDate] = useState("26.10.2026")
+  const [bookingDate, setBookingDate] = useState("22.10.2026")
   const [startTime, setStartTime] = useState("14:00")
   const [endTime, setEndTime] = useState("16:00")
   const [purpose, setPurpose] = useState(
-    (FALLBACK_RESOURCES[resParam] || FALLBACK_RESOURCES["1"]).defaultScope
+    (FALLBACK_RESOURCES[resParam] || FALLBACK_RESOURCES["2"]).defaultScope
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -127,7 +126,6 @@ export function NewReservationPage() {
       ])
 
       setQuota(quotaData)
-      setAllResources(resPage.items)
 
       const numericId = Number(resParam)
       const matched =
@@ -278,7 +276,7 @@ export function NewReservationPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start pt-2">
           <div className="lg:col-span-7 space-y-6">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 border-b border-neutral-200 pb-6">
               <div className="h-20 w-24 rounded-xl bg-white border border-neutral-200 overflow-hidden shrink-0 flex items-center justify-center p-1.5">
                 <img
                   src={displayImage}
@@ -295,29 +293,7 @@ export function NewReservationPage() {
               </div>
             </div>
 
-            {allResources.length > 1 && (
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-neutral-700">
-                  Schimbă echipamentul selectat
-                </label>
-                <select
-                  value={dbResource?.id || targetResourceId}
-                  onChange={(e) => {
-                    const chosen = allResources.find((r) => r.id === Number(e.target.value))
-                    if (chosen) setDbResource(chosen)
-                  }}
-                  className="w-full h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                >
-                  {allResources.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.nume} ({r.cod_inventar} · {r.sala_cod || r.sala_nume || "Lab"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <h3 className="text-sm font-bold text-neutral-900">Detalii rezervare</h3>
 
               <div className="space-y-1.5">
