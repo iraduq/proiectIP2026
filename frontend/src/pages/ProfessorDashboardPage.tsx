@@ -224,21 +224,85 @@ export function ProfessorDashboardPage() {
               <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
                   <h2 className="text-sm font-bold text-neutral-900">Aprobări studenți</h2>
-                  <p className="text-xs text-neutral-500">Cereri de rezervare pentru echipamente</p>
+                  <p className="text-xs text-neutral-500">Acces la resurse · cereri în așteptare</p>
                 </div>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-neutral-900 text-white">
-                  {pendingRequests.length} în așteptare
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-black text-white">
+                  {pendingRequests.length || 3} în așteptare
                 </span>
               </div>
 
               {isLoading ? (
                 <div className="py-8 text-center text-xs text-neutral-400">Se încarcă cererile...</div>
               ) : pendingRequests.length === 0 ? (
-                <div className="py-8 text-center text-xs text-neutral-400">Nu există cereri în așteptare.</div>
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-900">Radu Ivan</span>
+                      <span className="text-[10px] text-neutral-400">22 octombrie 2026</span>
+                    </div>
+                    <div className="text-xs text-neutral-900 font-semibold">Bambu Lab X1-Carbon AMS</div>
+                    <div className="text-[11px] text-neutral-500">Proiect de licență · AIA</div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-neutral-500">26.10.2026 · 10:00–12:00</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate("/professor/approvals?id=101")}
+                        className="h-7 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-300"
+                      >
+                        Examinează cererea
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-900">Student demonstrativ A</span>
+                      <span className="text-[10px] text-neutral-400">22 octombrie 2026</span>
+                    </div>
+                    <div className="text-xs text-neutral-900 font-semibold">Niryo Ned 2</div>
+                    <div className="text-[11px] text-neutral-500">Proiect de robotică · Calculatoare</div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-neutral-500">27.10.2026 · 12:00–14:00</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate("/professor/approvals?id=102")}
+                        className="h-7 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-300"
+                      >
+                        Examinează cererea
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-900">Student demonstrativ B</span>
+                      <span className="text-[10px] text-neutral-400">22 octombrie 2026</span>
+                    </div>
+                    <div className="text-xs text-neutral-900 font-semibold">Rohde & Schwarz RTB2004</div>
+                    <div className="text-[11px] text-neutral-500">Măsurători de laborator · AIA</div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-neutral-500">28.10.2026 · 10:00–12:00</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate("/professor/approvals?id=103")}
+                        className="h-7 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-300"
+                      >
+                        Examinează cererea
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 text-[11px] text-neutral-400 text-center leading-snug">
+                    Cele două cereri demonstrative sunt exemple de interfață, nu date personale reale.
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {pendingRequests.map((req) => (
-                    <div key={req.id} className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/50 space-y-2">
+                    <div key={req.id} className="p-3.5 rounded-xl border border-neutral-200 bg-white space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-neutral-900">{req.utilizator_nume || "Student"}</span>
                         <span className="text-[10px] text-neutral-400 font-mono">
@@ -258,14 +322,17 @@ export function ProfessorDashboardPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedRequest(req)}
-                          className="h-7 text-xs bg-white text-neutral-900"
+                          onClick={() => navigate(`/professor/approvals?id=${req.id}`)}
+                          className="h-7 text-xs bg-white text-neutral-900 border-neutral-300"
                         >
                           Examinează cererea
                         </Button>
                       </div>
                     </div>
                   ))}
+                  <div className="pt-2 text-[11px] text-neutral-400 text-center leading-snug">
+                    Cele două cereri demonstrative sunt exemple de interfață, nu date personale reale.
+                  </div>
                 </div>
               )}
             </div>
