@@ -131,7 +131,24 @@ class StudentQuotaResponse(BaseModel):
     active_reservations: list[ReservationResponse] = []
 
 
-# ===================== TECHNICAL HISTORY =====================
+class HourlySlot(BaseModel):
+    ora: str
+    status: str
+    rezervare_id: Optional[int] = None
+
+
+class DayAvailability(BaseModel):
+    data: str
+    zi_nume: str
+    slots: list[HourlySlot]
+
+
+class ResourceAvailabilityResponse(BaseModel):
+    resursa_id: int
+    stare_tehnica: StareTehnica
+    zile: list[DayAvailability]
+
+
 class TechnicalHistoryCreate(BaseModel):
     resursa_id: int = Field(..., gt=0)
     tip_interventie: str = Field(..., min_length=2, max_length=100)
