@@ -182,23 +182,36 @@ export function ProfessorDashboardPage() {
                     <div
                       key={r.id}
                       onClick={() => navigate(`/resources/${r.id}`)}
-                      className="py-3 flex items-center justify-between hover:bg-neutral-50 px-2 rounded-lg transition-colors cursor-pointer"
+                      className="py-3 flex items-center justify-between hover:bg-neutral-50 px-2 rounded-lg transition-colors cursor-pointer gap-3"
                     >
-                      <div className="space-y-0.5">
-                        <div className="text-xs font-semibold text-neutral-900">{r.nume}</div>
-                        <div className="text-[11px] text-neutral-500 flex items-center gap-2">
-                          <span className="font-mono text-neutral-600">{r.cod_inventar}</span>
-                          <span>•</span>
-                          <span>{r.sala_cod}</span>
-                          {r.specificatii && (
-                            <>
-                              <span>•</span>
-                              <span className="truncate max-w-xs">{r.specificatii}</span>
-                            </>
-                          )}
+                      <div className="flex items-center gap-3 min-w-0">
+                        {r.imagine_url ? (
+                          <img
+                            src={r.imagine_url}
+                            alt={r.nume}
+                            className="h-12 w-12 rounded-lg object-cover shrink-0 border border-neutral-200"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 text-neutral-400">
+                            <Cpu className="h-6 w-6" />
+                          </div>
+                        )}
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="text-xs font-semibold text-neutral-900 truncate">{r.nume}</div>
+                          <div className="text-[11px] text-neutral-500 flex items-center gap-2">
+                            <span className="font-mono text-neutral-600">{r.cod_inventar}</span>
+                            <span>•</span>
+                            <span>{r.sala_cod}</span>
+                            {r.specificatii && (
+                              <>
+                                <span>•</span>
+                                <span className="truncate max-w-xs">{r.specificatii}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-neutral-400" />
+                      <ArrowRight className="h-4 w-4 text-neutral-400 shrink-0" />
                     </div>
                   ))}
                 </div>
