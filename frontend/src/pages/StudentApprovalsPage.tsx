@@ -3,22 +3,14 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { reservationsApi } from "../api/reservations"
-import type { Reservation } from "../types"
 import {
   CheckCircle2,
-  XCircle,
-  Clock,
   AlertCircle,
-  ChevronRight,
-  UserCheck,
-  FileText,
-  Calendar,
-  Layers,
-  Info,
+  X,
 } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Badge } from "../components/ui/badge"
-import { Card, CardContent } from "../components/ui/card"
+import { Card } from "../components/ui/card"
 
 interface ApprovalItem {
   id: number
@@ -30,6 +22,7 @@ interface ApprovalItem {
   purpose: string
   dateStr: string
   timeRange: string
+  imageUrl: string
   status: "IN_ASTEPTARE" | "APROBATA" | "RESPINSA"
   rejectionReason?: string
   isDemo?: boolean
@@ -46,6 +39,7 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
     purpose: "Proiect de licență",
     dateStr: "26.10.2026",
     timeRange: "10:00–12:00",
+    imageUrl: "https://images.unsplash.com/photo-1631556097152-c39479cbfeab?auto=format&fit=crop&w=800&q=80",
     status: "IN_ASTEPTARE",
   },
   {
@@ -58,6 +52,7 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
     purpose: "Proiect de robotică",
     dateStr: "27.10.2026",
     timeRange: "12:00–14:00",
+    imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=800&q=80",
     status: "IN_ASTEPTARE",
     isDemo: true,
   },
@@ -71,6 +66,7 @@ const INITIAL_DEMO_REQUESTS: ApprovalItem[] = [
     purpose: "Măsurători de laborator",
     dateStr: "28.10.2026",
     timeRange: "10:00–12:00",
+    imageUrl: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
     status: "IN_ASTEPTARE",
     isDemo: true,
   },
@@ -115,6 +111,7 @@ export function StudentApprovalsPage() {
           timeRange: `${item.data_inceput ? item.data_inceput.substring(11, 16) : "10:00"}–${
             item.data_sfarsit ? item.data_sfarsit.substring(11, 16) : "12:00"
           }`,
+          imageUrl: "https://images.unsplash.com/photo-1631556097152-c39479cbfeab?auto=format&fit=crop&w=800&q=80",
           status: "IN_ASTEPTARE",
         }))
 
@@ -177,42 +174,8 @@ export function StudentApprovalsPage() {
   const displayedList = activeTab === "pending" ? pendingList : resolvedList
 
   return (
-    <AppLayout breadcrumbs={["Spațiu de lucru", "Aprobări studenți", "Examinează cererea"]}>
+    <AppLayout breadcrumbs={["Spațiu de lucru", "Aprobări studenți"]}>
       <div className="space-y-6 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-neutral-900">
-                Aprobări studenți
-              </h1>
-              <Badge variant="secondary" className="bg-neutral-100 text-neutral-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                {pendingList.length} în așteptare
-              </Badge>
-            </div>
-            <p className="text-xs text-neutral-500">
-              Verifică scopul și acordă acces la resursele solicitate. Decizia nu creează o rezervare.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/professor")}
-              className="text-xs h-8 border-neutral-300"
-            >
-              Panou departament
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate("/professor/group-booking")}
-              className="text-xs h-8 bg-black hover:bg-neutral-800 text-white"
-            >
-              Rezervare nouă
-            </Button>
-          </div>
-        </div>
-
         {actionSuccess && (
           <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
@@ -233,201 +196,197 @@ export function StudentApprovalsPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 border-b border-neutral-200 pb-2">
-          <button
-            onClick={() => setActiveTab("pending")}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 ${
-              activeTab === "pending"
-                ? "bg-black text-white"
-                : "text-neutral-600 hover:text-black hover:bg-neutral-100"
-            }`}
-          >
-            <span>În așteptare</span>
-            <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-white/20">
-              {pendingList.length}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab("resolved")}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 ${
-              activeTab === "resolved"
-                ? "bg-black text-white"
-                : "text-neutral-600 hover:text-black hover:bg-neutral-100"
-            }`}
-          >
-            <span>Soluționate</span>
-            <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
-              {resolvedList.length}
-            </span>
-          </button>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-7 space-y-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-neutral-900">
+                  Aprobări studenți
+                </h1>
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-black text-white">
+                  {pendingList.length} în așteptare
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500">
+                Verifică scopul și acordă acces la resursele solicitate. Decizia nu creează o rezervare.
+              </p>
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-6 space-y-3">
-            {displayedList.length === 0 ? (
-              <Card className="p-8 text-center text-xs text-neutral-400 bg-white border-neutral-200 rounded-2xl">
-                Nu există cereri în această secțiune.
-              </Card>
-            ) : (
-              displayedList.map((req) => {
-                const isSelected = req.id === selectedRequest?.id
-                return (
-                  <Card
-                    key={req.id}
-                    onClick={() => setSelectedId(req.id)}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
-                      isSelected
-                        ? "border-black shadow-sm ring-1 ring-black"
-                        : "border-neutral-200 hover:border-neutral-300"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-neutral-900">{req.studentName}</span>
-                          <span className="text-[11px] text-neutral-400">·</span>
-                          <span className="text-[11px] text-neutral-500">{req.dateStr}</span>
-                          {isSelected && (
-                            <Badge variant="outline" className="text-[10px] font-medium border-neutral-300 bg-neutral-50">
-                              Selectată
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="font-semibold text-xs text-neutral-800">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab("pending")}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                  activeTab === "pending"
+                    ? "bg-neutral-200/80 text-neutral-900"
+                    : "text-neutral-500 hover:text-black hover:bg-neutral-100"
+                }`}
+              >
+                În așteptare ({pendingList.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("resolved")}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                  activeTab === "resolved"
+                    ? "bg-neutral-200/80 text-neutral-900"
+                    : "text-neutral-500 hover:text-black hover:bg-neutral-100"
+                }`}
+              >
+                Soluționate
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {displayedList.length === 0 ? (
+                <div className="p-8 text-center text-xs text-neutral-400 bg-white border border-neutral-200 rounded-2xl">
+                  Nu există cereri în această secțiune.
+                </div>
+              ) : (
+                displayedList.map((req) => {
+                  const isSelected = req.id === selectedRequest?.id
+                  return (
+                    <div
+                      key={req.id}
+                      onClick={() => setSelectedId(req.id)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer bg-white space-y-2.5 ${
+                        isSelected
+                          ? "border-neutral-400 shadow-xs"
+                          : "border-neutral-200 hover:border-neutral-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-neutral-900">{req.studentName}</span>
+                        <span className="text-[11px] text-neutral-400">
+                          {isSelected ? "Selectată" : req.isDemo ? "Exemplu UI" : req.dateStr}
+                        </span>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <div className="font-semibold text-xs text-neutral-900">
                           {req.resourceName}
                         </div>
-                        <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
-                          <span className="font-mono text-neutral-600">{req.inventoryCode}</span>
-                          <span>·</span>
-                          <span>{req.roomName}</span>
+                        <div className="text-[11px] text-neutral-400 font-mono">
+                          {req.inventoryCode} · {req.roomName}
                         </div>
-                        <div className="text-[11px] text-neutral-600 pt-1">
-                          <span className="font-medium text-neutral-700">Scop: </span>
+                        <div className="text-[11px] text-neutral-500 pt-0.5">
+                          <span>Scop: </span>
                           <span>{req.purpose}</span>
                         </div>
-                        <div className="text-[11px] text-neutral-600">
-                          <span className="font-medium text-neutral-700">Interval: </span>
+                        <div className="text-[11px] text-neutral-500">
+                          <span>Interval: </span>
                           <span>{req.dateStr} · {req.timeRange}</span>
                         </div>
                       </div>
 
-                      <div className="shrink-0 flex flex-col items-end gap-2">
-                        {req.status === "IN_ASTEPTARE" ? (
-                          <Badge variant="secondary" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                            În așteptare
-                          </Badge>
-                        ) : req.status === "APROBATA" ? (
-                          <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
-                            Aprobată
-                          </Badge>
+                      <div className="pt-1 flex items-center gap-2">
+                        {isSelected ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-50"
+                          >
+                            Cerere deschisă
+                          </Button>
                         ) : (
-                          <Badge variant="secondary" className="text-[10px] bg-rose-50 text-rose-700 border-rose-200">
-                            Respinsă
-                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleApprove(req.id)
+                            }}
+                            className="h-7 text-xs bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-50"
+                          >
+                            Aprobă
+                          </Button>
                         )}
-
-                        {req.status === "IN_ASTEPTARE" && req.isDemo && (
-                          <div className="flex items-center gap-1.5 pt-1">
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleApprove(req.id)
-                              }}
-                              className="h-6 text-[10px] px-2 bg-black text-white hover:bg-neutral-800"
-                            >
-                              Aprobă
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedId(req.id)
-                              }}
-                              className="h-6 text-[10px] px-2 border-neutral-300"
-                            >
-                              Respinge
-                            </Button>
-                          </div>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedId(req.id)
+                          }}
+                          className="h-7 text-xs text-neutral-600 hover:text-black hover:bg-neutral-50"
+                        >
+                          Respinge cu motiv
+                        </Button>
                       </div>
                     </div>
-                  </Card>
-                )
-              })
-            )}
+                  )
+                })
+              )}
 
-            <div className="p-3 text-[11px] text-neutral-400 text-center">
-              Solicitanții demonstrativi sunt exemple de interfață; nu reprezintă persoane reale.
+              <div className="pt-2 text-[11px] text-neutral-400 text-center leading-snug">
+                Solicitanții demonstrativi sunt exemple de interfață; nu reprezintă persoane reale.
+              </div>
             </div>
           </div>
 
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-5">
             {selectedRequest ? (
-              <Card className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-xs space-y-5">
-                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <Card className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-xs space-y-4">
+                <div className="flex items-start justify-between border-b border-neutral-100 pb-3">
                   <div>
-                    <h2 className="text-sm font-bold text-neutral-900">Cerere deschisă</h2>
-                    <p className="text-[11px] text-neutral-500">Examinare detaliată și decizie acces</p>
+                    <h2 className="text-sm font-bold text-neutral-900">Examinează cererea</h2>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Acces la resursă · cerere în așteptare</p>
                   </div>
-                  {selectedRequest.status === "IN_ASTEPTARE" ? (
-                    <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                      În așteptare
-                    </Badge>
-                  ) : selectedRequest.status === "APROBATA" ? (
-                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                      Aprobată
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-rose-50 text-rose-700 border-rose-200 text-xs">
-                      Respinsă
-                    </Badge>
-                  )}
+                  <button onClick={() => navigate("/professor")} className="text-neutral-400 hover:text-neutral-600">
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Student:</span>
-                      <span className="font-semibold text-neutral-900">{selectedRequest.studentName} ({selectedRequest.studentDetail})</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Echipament:</span>
-                      <span className="font-semibold text-neutral-900">{selectedRequest.resourceName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Inventar / Sală:</span>
-                      <span className="font-mono text-neutral-800">{selectedRequest.inventoryCode} · {selectedRequest.roomName}</span>
-                    </div>
+                <div className="flex items-center justify-between text-xs">
+                  <Badge variant="secondary" className="bg-neutral-100 text-neutral-800 text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                    În așteptare
+                  </Badge>
+                  <span className="text-[11px] text-neutral-400">22 octombrie 2026</span>
+                </div>
+
+                <div className="rounded-xl overflow-hidden h-44 bg-neutral-900 border border-neutral-200">
+                  <img
+                    src={selectedRequest.imageUrl}
+                    alt={selectedRequest.resourceName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-sm text-neutral-900 leading-tight">
+                    {selectedRequest.resourceName}
+                  </h3>
+                  <div className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                    {selectedRequest.inventoryCode} · {selectedRequest.roomName}
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-1 text-xs">
+                  <div>
+                    <span className="text-[11px] text-neutral-400 block mb-0.5">Student</span>
+                    <span className="font-semibold text-neutral-900">{selectedRequest.studentName}</span>
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="font-semibold text-neutral-700">Scopul solicitării:</span>
-                    <p className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 text-neutral-800 leading-relaxed">
-                      {selectedRequest.purpose}
-                    </p>
+                  <div>
+                    <span className="text-[11px] text-neutral-400 block mb-0.5">Scopul solicitării</span>
+                    <span className="font-semibold text-neutral-900">{selectedRequest.purpose}</span>
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="font-semibold text-neutral-700">Interval solicitat:</span>
-                    <p className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 text-neutral-800 font-medium">
-                      {selectedRequest.dateStr} · {selectedRequest.timeRange}
-                    </p>
+                  <div>
+                    <span className="text-[11px] text-neutral-400 block mb-0.5">Interval solicitat</span>
+                    <span className="font-semibold text-neutral-900">{selectedRequest.dateStr} · {selectedRequest.timeRange}</span>
                   </div>
 
                   {selectedRequest.status === "RESPINSA" && selectedRequest.rejectionReason && (
-                    <div className="space-y-1">
-                      <span className="font-semibold text-rose-700">Motivul respingerii:</span>
-                      <p className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-800">
+                    <div>
+                      <span className="text-[11px] text-rose-500 block mb-0.5">Motivul respingerii</span>
+                      <span className="text-xs text-rose-700 bg-rose-50 p-2.5 rounded-lg border border-rose-100 block">
                         {selectedRequest.rejectionReason}
-                      </p>
+                      </span>
                     </div>
                   )}
 
                   {selectedRequest.status === "IN_ASTEPTARE" && (
-                    <div className="space-y-2 pt-2">
-                      <label className="block font-semibold text-neutral-800">
+                    <div className="space-y-1.5 pt-1">
+                      <label className="block text-xs font-semibold text-neutral-900">
                         Motivul respingerii
                       </label>
                       <textarea
@@ -435,23 +394,23 @@ export function StudentApprovalsPage() {
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
                         placeholder="Scrie motivul pentru student…"
-                        className="w-full text-xs p-3 rounded-xl border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black resize-none"
+                        className="w-full text-xs p-3 rounded-xl border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black resize-none placeholder:text-neutral-400"
                       />
-                      <p className="text-[11px] text-neutral-400 leading-snug">
+                      <p className="text-[10px] text-neutral-400 leading-snug">
                         Obligatoriu pentru „Respinge cu motiv”. Nu este necesar pentru aprobare.
                       </p>
 
-                      <div className="pt-3 flex flex-wrap items-center gap-3">
+                      <div className="pt-2 space-y-2">
                         <Button
                           onClick={() => handleApprove(selectedRequest.id)}
-                          className="bg-black hover:bg-neutral-800 text-white text-xs h-9 px-4 rounded-lg font-medium"
+                          className="w-full bg-black hover:bg-neutral-800 text-white text-xs h-10 rounded-xl font-semibold shadow-xs"
                         >
                           Aprobă accesul
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => handleReject(selectedRequest.id)}
-                          className="border-neutral-300 text-rose-700 hover:bg-rose-50 text-xs h-9 px-4 rounded-lg font-medium"
+                          className="w-full border-neutral-300 text-neutral-900 hover:bg-neutral-50 text-xs h-10 rounded-xl font-medium"
                         >
                           Respinge cu motiv
                         </Button>
