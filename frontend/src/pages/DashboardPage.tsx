@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
 import { reservationsApi } from "../api/reservations"
+import { getCatalogItemByIdOrCode } from "../data/catalogItems"
 import { AppLayout } from "../components/layout/AppLayout"
 import { Button } from "../components/ui/button"
 import { Card } from "../components/ui/card"
@@ -19,7 +20,7 @@ import {
   Compass,
 } from "lucide-react"
 
-interface ActiveUsageItem {
+interface DashboardBookingRow {
   id: number
   resourceId: number
   name: string
@@ -28,45 +29,9 @@ interface ActiveUsageItem {
   room: string
   status: string
   dueAlert?: string
+  endTimeStr?: string
   imageUrl: string
 }
-
-const DEFAULT_IN_USE: ActiveUsageItem[] = [
-  {
-    id: 101,
-    resourceId: 1,
-    name: "Workstation AI",
-    code: "INV-USV-2026-014",
-    interval: "22.10.2026 · 09:00–16:00",
-    room: "Lab 204",
-    status: "Activ",
-    imageUrl: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 102,
-    resourceId: 3,
-    name: "Jetson Orin Nano",
-    code: "INV-USV-2026-102",
-    interval: "22.10.2026 · 10:00–16:00",
-    room: "Lab 210",
-    status: "Activ",
-    dueAlert: "Azi 16:00",
-    imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80",
-  },
-]
-
-const DEFAULT_UPCOMING: ActiveUsageItem[] = [
-  {
-    id: 201,
-    resourceId: 2,
-    name: "Niryo Ned 2",
-    code: "INV-USV-2026-088",
-    interval: "23.10.2026 · 10:00–12:00",
-    room: "Lab 208",
-    status: "Confirmat",
-    imageUrl: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=400&q=80",
-  },
-]
 
 const FEATURED_RESOURCES = [
   {
@@ -96,13 +61,25 @@ function formatReservationInterval(res: Reservation): string {
   try {
     const start = new Date(res.data_inceput)
     const end = new Date(res.data_sfarsit)
-    const d = `${String(start.getDate()).padStart(2, "0")}.${String(start.getMonth() + 1).padStart(2, "0")}.${start.getFullYear()}`
+    const d1 = `${String(start.getDate()).padStart(2, "0")}.${String(start.getMonth() + 1).padStart(2, "0")}.${start.getFullYear()}`
+    const d2 = `${String(end.getDate()).padStart(2, "0")}.${String(end.getMonth() + 1).padStart(2, "0")}.${end.getFullYear()}`
     const sTime = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`
     const eTime = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`
-    return `${d} · ${sTime}–${eTime}`
+    if (d1 === d2) {
+      return `${d1} · ${sTime}–${eTime}`
+    }
+    return `${d1} (${sTime}) – ${d2} (${eTime})`
   } catch {
-    return "22.10.2026 · 10:00–14:00"
+    return "—"
   }
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 export function DashboardPage() {
@@ -112,13 +89,15 @@ export function DashboardPage() {
   const [quota, setQuota] = useState<StudentQuota | null>(null)
   const [myReservations, setMyReservations] = useState<Reservation[]>([])
   const [totalCatalogCount, setTotalCatalogCount] = useState<number>(130)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   useEffect(() => {
     const loadData = async () => {
+      setIsLoading(true)
       try {
         const [resCatalog, reservData, quotaData] = await Promise.all([
           resourcesApi.getResources({ limit: 1 }).catch(() => null),
-          reservationsApi.getReservations({ limit: 10 }).catch(() => null),
+          reservationsApi.getReservations({ limit: 100 }).catch(() => null),
           reservationsApi.getMyQuota().catch(() => null),
         ])
         if (resCatalog && resCatalog.total > 0) {
@@ -131,13 +110,15 @@ export function DashboardPage() {
           setQuota(quotaData)
         }
       } catch {
+      } finally {
+        setIsLoading(false)
       }
     }
     loadData()
   }, [])
 
-  const fullName = user?.nume || "Radu Ivan"
-  const firstName = fullName.split(" ")[0] || "Radu"
+  const fullName = user?.nume || "Student"
+  const firstName = fullName.split(" ")[0] || "Student"
   const initials = fullName
     .split(" ")
     .map((p) => p[0])
@@ -145,30 +126,61 @@ export function DashboardPage() {
     .slice(0, 2)
     .toUpperCase()
 
-  const dynamicInUse: ActiveUsageItem[] = myReservations
-    .filter((r) => r.stare === "APROBATA" || r.stare === "IN_ASTEPTARE")
-    .slice(0, 3)
-    .map((r, idx) => ({
+  const now = new Date()
+
+  const activeOrPending = myReservations.filter(
+    (r) => r.stare === "APROBATA" || r.stare === "IN_ASTEPTARE"
+  )
+
+  const inUseRaw = activeOrPending.filter((r) => {
+    const start = new Date(r.data_inceput)
+    const end = new Date(r.data_sfarsit)
+    return start <= now && end >= now
+  })
+
+  const upcomingRaw = activeOrPending.filter((r) => {
+    const start = new Date(r.data_inceput)
+    return start > now
+  })
+
+  const returnedCount = myReservations.filter((r) => r.stare === "FINALIZATA").length
+
+  const mapToRow = (r: Reservation, isUpcoming: boolean): DashboardBookingRow => {
+    const catalogMeta = getCatalogItemByIdOrCode(r.resursa_cod || r.resursa_id)
+    const end = new Date(r.data_sfarsit)
+    const endHourMin = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`
+    const dueToday = !isUpcoming && isSameCalendarDay(end, now)
+
+    return {
       id: r.id,
       resourceId: r.resursa_id,
-      name: r.resursa_nume || "Workstation AI Deep Learning",
-      code: r.resursa_cod || `INV-USV-2026-0${14 + idx}`,
+      name: r.resursa_nume || catalogMeta.name,
+      code: r.resursa_cod || catalogMeta.code,
       interval: formatReservationInterval(r),
-      room: r.sala_nume || "Lab 204",
-      status: "Activ",
-      dueAlert: idx === 1 ? "Azi 16:00" : undefined,
-      imageUrl:
-        idx % 2 === 0
-          ? "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=400&q=80"
-          : "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80",
-    }))
+      room: r.sala_nume || catalogMeta.roomLabel,
+      status: isUpcoming
+        ? r.stare === "APROBATA"
+          ? "Confirmat"
+          : "În așteptare"
+        : "Activ",
+      dueAlert: dueToday ? `Azi ${endHourMin}` : undefined,
+      endTimeStr: endHourMin,
+      imageUrl: catalogMeta.imageUrl,
+    }
+  }
 
-  const inUseRows = dynamicInUse.length >= 2 ? dynamicInUse : DEFAULT_IN_USE
-  const upcomingRows = DEFAULT_UPCOMING
+  const inUseRows = inUseRaw.map((r) => mapToRow(r, false))
+  const upcomingRows = upcomingRaw.map((r) => mapToRow(r, true))
+  const dueTodayRows = inUseRows.filter((row) => Boolean(row.dueAlert))
 
-  const activeCount = quota && quota.active_count > 0 ? quota.active_count : inUseRows.length
+  const activeCount = quota ? quota.active_count : activeOrPending.length
   const maxQuota = quota?.max_limit || 4
   const quotaPercent = Math.min(100, Math.round((activeCount / maxQuota) * 100))
+
+  const nextUpcomingText =
+    upcomingRows.length > 0
+      ? `${upcomingRows[0].interval.split("·")[0].trim()} · ${upcomingRows[0].name}`
+      : "Nicio rezervare viitoare"
 
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Panou de bord"]}>
@@ -183,11 +195,11 @@ export function DashboardPage() {
                 variant="outline"
                 className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-700 text-[11px] font-medium px-2.5 py-0.5"
               >
-                Student
+                {user?.rol === "STUDENT" || !user?.rol ? "Student" : user.rol}
               </Badge>
             </div>
             <p className="text-xs text-neutral-500">
-              Panou de bord personal · 22 octombrie 2026
+              Panou de bord personal · Gestiune rezervări și echipamente
             </p>
           </div>
 
@@ -200,17 +212,20 @@ export function DashboardPage() {
           </Button>
         </Card>
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-3.5 flex items-start gap-3">
-          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-0.5 text-xs">
-            <p className="font-bold text-amber-900">
-              Ai 1 resursă cu termen astăzi
-            </p>
-            <p className="text-amber-800">
-              Ai 1 resursă de returnat astăzi: Kit NVIDIA Jetson Orin Nano (Lab 210) până la ora 16:00.
-            </p>
+        {dueTodayRows.length > 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-3.5 flex items-start gap-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5 text-xs">
+              <p className="font-bold text-amber-900">
+                Ai {dueTodayRows.length} {dueTodayRows.length === 1 ? "resursă" : "resurse"} cu termen astăzi
+              </p>
+              <p className="text-amber-800">
+                De returnat astăzi: {dueTodayRows[0].name} ({dueTodayRows[0].room}) până la ora{" "}
+                {dueTodayRows[0].endTimeStr || "16:00"}.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="rounded-2xl border-neutral-200 bg-white p-5 shadow-none space-y-2.5">
@@ -240,8 +255,8 @@ export function DashboardPage() {
             <div className="text-3xl font-extrabold text-neutral-900">
               {upcomingRows.length}
             </div>
-            <div className="text-[11px] text-neutral-400">
-              23.10.2026 · Niryo Ned 2
+            <div className="text-[11px] text-neutral-400 truncate">
+              {nextUpcomingText}
             </div>
           </Card>
 
@@ -251,23 +266,43 @@ export function DashboardPage() {
               <CheckCircle2 className="h-3.5 w-3.5 text-neutral-400" />
             </div>
             <div className="text-3xl font-extrabold text-neutral-900">
-              12
+              {returnedCount}
             </div>
             <div className="text-[11px] text-neutral-400">
-              în anul universitar 2026
+              în anul universitar curent
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-amber-300 bg-amber-50/10 p-5 shadow-none space-y-2.5">
+          <Card
+            className={`rounded-2xl p-5 shadow-none space-y-2.5 ${
+              dueTodayRows.length > 0
+                ? "border-amber-300 bg-amber-50/10"
+                : "border-neutral-200 bg-white"
+            }`}
+          >
             <div className="flex items-center justify-between text-xs text-neutral-600">
               <span className="font-medium">Alerte scadente</span>
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+              <AlertTriangle
+                className={`h-3.5 w-3.5 ${
+                  dueTodayRows.length > 0 ? "text-amber-600" : "text-neutral-400"
+                }`}
+              />
             </div>
-            <div className="text-3xl font-extrabold text-amber-600">
-              1
+            <div
+              className={`text-3xl font-extrabold ${
+                dueTodayRows.length > 0 ? "text-amber-600" : "text-neutral-900"
+              }`}
+            >
+              {dueTodayRows.length}
             </div>
-            <div className="text-[11px] text-amber-700 font-medium">
-              Returnare azi la 16:00
+            <div
+              className={`text-[11px] font-medium ${
+                dueTodayRows.length > 0 ? "text-amber-700" : "text-neutral-400"
+              }`}
+            >
+              {dueTodayRows.length > 0
+                ? `Returnare azi la ${dueTodayRows[0].endTimeStr || "16:00"}`
+                : "Nicio returnare scadentă azi"}
             </div>
           </Card>
         </div>
@@ -297,55 +332,69 @@ export function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
-                    {inUseRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-neutral-50/60 transition-colors">
-                        <td className="py-3.5 px-3">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={row.imageUrl}
-                              alt={row.name}
-                              className="h-10 w-10 rounded-lg object-cover bg-neutral-900 shrink-0"
-                            />
-                            <div>
-                              <div className="font-bold text-neutral-900">{row.name}</div>
-                              <div className="text-[11px] text-neutral-400 font-mono">{row.code}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-3 text-neutral-700 font-medium">
-                          {row.interval}
-                        </td>
-                        <td className="py-3.5 px-3 text-neutral-600">
-                          {row.room}
-                        </td>
-                        <td className="py-3.5 px-3">
-                          <div className="flex flex-col items-start gap-1">
-                            <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
-                              {row.status}
-                            </Badge>
-                            {row.dueAlert && (
-                              <Badge
-                                variant="outline"
-                                className="rounded-full bg-amber-50 border-amber-200 text-amber-800 text-[10px] font-semibold px-2 py-0.5 gap-1"
-                              >
-                                <AlertTriangle className="h-2.5 w-2.5 text-amber-600" />
-                                {row.dueAlert}
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-3 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/resources/${row.resourceId}`)}
-                            className="h-7 px-3 rounded-lg border-neutral-200 text-[11px] font-semibold text-neutral-800"
-                          >
-                            Detalii
-                          </Button>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-neutral-400">
+                          Se încarcă rezervările active...
                         </td>
                       </tr>
-                    ))}
+                    ) : inUseRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-neutral-400">
+                          Nu ai nicio resursă preluată în utilizare în acest moment.
+                        </td>
+                      </tr>
+                    ) : (
+                      inUseRows.map((row) => (
+                        <tr key={row.id} className="hover:bg-neutral-50/60 transition-colors">
+                          <td className="py-3.5 px-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={row.imageUrl}
+                                alt={row.name}
+                                className="h-10 w-10 rounded-lg object-cover bg-neutral-900 shrink-0"
+                              />
+                              <div>
+                                <div className="font-bold text-neutral-900">{row.name}</div>
+                                <div className="text-[11px] text-neutral-400 font-mono">{row.code}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3 text-neutral-700 font-medium">
+                            {row.interval}
+                          </td>
+                          <td className="py-3.5 px-3 text-neutral-600">
+                            {row.room}
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <div className="flex flex-col items-start gap-1">
+                              <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
+                                {row.status}
+                              </Badge>
+                              {row.dueAlert && (
+                                <Badge
+                                  variant="outline"
+                                  className="rounded-full bg-amber-50 border-amber-200 text-amber-800 text-[10px] font-semibold px-2 py-0.5 gap-1"
+                                >
+                                  <AlertTriangle className="h-2.5 w-2.5 text-amber-600" />
+                                  {row.dueAlert}
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate("/reservations")}
+                              className="h-7 px-3 rounded-lg border-neutral-200 text-[11px] font-semibold text-neutral-800"
+                            >
+                              Detalii
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -355,7 +404,9 @@ export function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-neutral-800" />
-                  <h2 className="text-sm font-bold text-neutral-900">Urmează în calendar</h2>
+                  <h2 className="text-sm font-bold text-neutral-900">
+                    Urmează în calendar (De preluat)
+                  </h2>
                 </div>
                 <Badge
                   variant="outline"
@@ -370,54 +421,68 @@ export function DashboardPage() {
                   <thead className="bg-neutral-50 text-neutral-500 font-medium border-y border-neutral-100">
                     <tr>
                       <th className="py-2.5 px-3">Resursă</th>
-                      <th className="py-2.5 px-3">Interval</th>
+                      <th className="py-2.5 px-3">Interval preluare</th>
                       <th className="py-2.5 px-3">Laborator</th>
                       <th className="py-2.5 px-3">Stare</th>
                       <th className="py-2.5 px-3 text-right">Acțiune</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
-                    {upcomingRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-neutral-50/60 transition-colors">
-                        <td className="py-3.5 px-3">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={row.imageUrl}
-                              alt={row.name}
-                              className="h-10 w-10 rounded-lg object-cover bg-neutral-100 shrink-0"
-                            />
-                            <div>
-                              <div className="font-bold text-neutral-900">{row.name}</div>
-                              <div className="text-[11px] text-neutral-400 font-mono">{row.code}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-3 text-neutral-700 font-medium">
-                          {row.interval}
-                        </td>
-                        <td className="py-3.5 px-3 text-neutral-600">
-                          {row.room}
-                        </td>
-                        <td className="py-3.5 px-3">
-                          <Badge
-                            variant="outline"
-                            className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-800 text-[10px] font-semibold px-2.5 py-0.5"
-                          >
-                            {row.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3.5 px-3 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/resources/${row.resourceId}`)}
-                            className="h-7 px-3 rounded-lg border-neutral-200 text-[11px] font-semibold text-neutral-800"
-                          >
-                            Detalii
-                          </Button>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-neutral-400">
+                          Se încarcă calendarul...
                         </td>
                       </tr>
-                    ))}
+                    ) : upcomingRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-neutral-400">
+                          Nu ai rezervări viitoare programate în calendar.
+                        </td>
+                      </tr>
+                    ) : (
+                      upcomingRows.map((row) => (
+                        <tr key={row.id} className="hover:bg-neutral-50/60 transition-colors">
+                          <td className="py-3.5 px-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={row.imageUrl}
+                                alt={row.name}
+                                className="h-10 w-10 rounded-lg object-cover bg-neutral-100 shrink-0"
+                              />
+                              <div>
+                                <div className="font-bold text-neutral-900">{row.name}</div>
+                                <div className="text-[11px] text-neutral-400 font-mono">{row.code}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3 text-neutral-700 font-medium">
+                            {row.interval}
+                          </td>
+                          <td className="py-3.5 px-3 text-neutral-600">
+                            {row.room}
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <Badge
+                              variant="outline"
+                              className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-800 text-[10px] font-semibold px-2.5 py-0.5"
+                            >
+                              {row.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-3 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate("/reservations")}
+                              className="h-7 px-3 rounded-lg border-neutral-200 text-[11px] font-semibold text-neutral-800"
+                            >
+                              Detalii
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -539,7 +604,7 @@ export function DashboardPage() {
                   Ghid laborator
                 </Button>
                 <Button
-                  onClick={() => navigate("/resources/1")}
+                  onClick={() => navigate("/resources")}
                   className="w-full h-9 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold"
                 >
                   Rezervă o resursă

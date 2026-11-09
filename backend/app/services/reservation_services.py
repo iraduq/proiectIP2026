@@ -94,7 +94,6 @@ class ReservationService:
         )
 
     async def create(self, db: AsyncSession, actor: User, data: ReservationCreate) -> ReservationResponse:
-        # 1. Verify resource exists and load full hierarchy
         resource = await resource_repository.get_detailed(db, data.resursa_id)
         if not resource:
             raise ResourceNotFoundError(data.resursa_id)
@@ -108,41 +107,14 @@ class ReservationService:
         if resource.stare_tehnica == StareTehnica.IN_MENTENANTA:
             raise ResourceInMaintenanceError(resource.id)
 
-        # 2. Time interval validation
         if data.data_sfarsit <= data.data_inceput:
             raise InvalidReservationIntervalError("Data de sfârșit trebuie să fie ulterioară datei de început.")
 
-        # 3. Student specific checks
         if is_student(actor):
-            # Matricol check
-            if not actor.numar_matricol or not actor.numar_matricol.strip():
-                raise StudentMatricolRequiredError()
-
-            # Faculty scoping check
-            room = resource.room
-            dept = room.department if room else None
-            fac_id = dept.facultate_id if dept else None
-            if actor.facultate_id and fac_id != actor.facultate_id:
-                raise SpecializationAccessDeniedError(
-                    f"Resursa aparține altei facultăți. Sunteți înrolat la facultatea ID {actor.facultate_id}."
-                )
-
-            # Limit: max 4 active reservations
             active_count = await reservation_repository.count_active_by_user(db, actor.id_utilizator)
             if active_count >= 4:
                 raise ReservationLimitExceededError(4)
 
-            # Duplicate category check
-            user_active_bookings = await reservation_repository.get_active_by_user(db, actor.id_utilizator)
-            for existing_b in user_active_bookings:
-                if (
-                    existing_b.resource
-                    and existing_b.resource.categorie_id == resource.categorie_id
-                ):
-                    cat_name = resource.category.nume if resource.category else "aceeași categorie"
-                    raise DuplicateCategoryReservationError(cat_name)
-
-        # 4. Overlap / Conflict check
         conflicts = await reservation_repository.find_conflicts(
             db, data.resursa_id, data.data_inceput, data.data_sfarsit
         )
@@ -151,7 +123,6 @@ class ReservationService:
                 data.resursa_id, conflicts[0].data_inceput, conflicts[0].data_sfarsit
             )
 
-        # 5. Create reservation
         reservation = Reservation(
             resursa_id=data.resursa_id,
             utilizator_id=actor.id_utilizator,
