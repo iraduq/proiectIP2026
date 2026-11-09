@@ -28,7 +28,7 @@ async def list_resources(
     is_active: Optional[bool] = Query(default=None),
     search: Optional[str] = Query(default=None, max_length=100),
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission(PermissionCode.RESOURCES_READ)),
 ) -> PaginatedResponse[ResourceResponse]:

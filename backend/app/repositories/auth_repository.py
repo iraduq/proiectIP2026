@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from app.api.schemas.users import UserCreate
-from app.db.models import Role, User
+from app.db.models import Faculty, Role, User, UserRole
 
 
 class AuthRepository:
@@ -40,6 +40,12 @@ class AuthRepository:
             db.add(role)
             await db.flush()
 
+        resolved_facultate_id = user_data.facultate_id
+        if resolved_facultate_id is None and user_data.rol == UserRole.STUDENT:
+            first_fac = (await db.execute(select(Faculty).order_by(Faculty.id.asc()))).scalars().first()
+            if first_fac:
+                resolved_facultate_id = first_fac.id
+
         full_name = f"{user_data.first_name} {user_data.last_name}"
         user = User(
             nume=full_name,
@@ -48,7 +54,7 @@ class AuthRepository:
             role_id=role.id,
             numar_matricol=user_data.numar_matricol,
             id_angajat=user_data.id_angajat,
-            facultate_id=user_data.facultate_id,
+            facultate_id=resolved_facultate_id,
             is_active=True,
         )
         db.add(user)
