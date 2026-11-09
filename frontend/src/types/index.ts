@@ -139,6 +139,7 @@ export interface Resource {
   stare_tehnica: StareTehnica
   descriere?: string | null
   specificatii?: string | null
+  imagine_url?: string | null
   is_active: boolean
   created_at: string
   updated_at: string

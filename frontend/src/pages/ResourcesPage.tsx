@@ -594,18 +594,33 @@ export function ResourcesPage() {
                         {res.cod_inventar}
                       </td>
                       <td className="py-3.5 px-4 max-w-xs">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/resources/${res.id}`)}
-                          className="font-medium text-neutral-900 leading-snug hover:underline text-left block"
-                        >
-                          {res.nume}
-                        </button>
-                        {res.specificatii && (
-                          <div className="text-[11px] text-neutral-500 truncate mt-0.5">
-                            {res.specificatii}
+                        <div className="flex items-center gap-3">
+                          {res.imagine_url ? (
+                            <img
+                              src={res.imagine_url}
+                              alt={res.nume}
+                              className="h-10 w-10 rounded-lg object-cover shrink-0 border border-neutral-200"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 text-neutral-400">
+                              <Cpu className="h-5 w-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/resources/${res.id}`)}
+                              className="font-medium text-neutral-900 leading-snug hover:underline text-left block truncate"
+                            >
+                              {res.nume}
+                            </button>
+                            {res.specificatii && (
+                              <div className="text-[11px] text-neutral-500 truncate mt-0.5">
+                                {res.specificatii}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge variant="outline" className="text-[11px] font-normal border-neutral-300">

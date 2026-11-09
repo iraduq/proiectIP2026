@@ -221,9 +221,18 @@ export function ResourceDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-xs">
-              <div className="h-48 bg-neutral-900 flex items-center justify-center text-white relative">
-                <Cpu className="h-16 w-16 text-neutral-400 opacity-60" />
-                <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded font-mono text-[11px] bg-black/60 text-white border border-white/10 backdrop-blur-xs">
+              <div className="h-56 bg-neutral-900 flex items-center justify-center text-white relative overflow-hidden">
+                {resource?.imagine_url ? (
+                  <img
+                    src={resource.imagine_url}
+                    alt={resource.nume}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Cpu className="h-16 w-16 text-neutral-400 opacity-60" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded font-mono text-[11px] bg-black/70 text-white border border-white/20 backdrop-blur-xs">
                   {resource?.cod_inventar}
                 </span>
               </div>
