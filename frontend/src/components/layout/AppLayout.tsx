@@ -18,6 +18,7 @@ import {
   Cpu,
   Calendar,
   Wrench,
+  Users,
 } from "lucide-react"
 import { Input } from "../ui/input"
 
@@ -95,9 +96,16 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
     user?.rol === "ADMINISTRATOR" ||
     user?.rol === "RESPONSABIL_LABORATOR" ||
     Boolean(user?.permissions?.includes("technical_history:read"))
+  const isProfessor = user?.rol === "PROFESOR"
 
   const navItems = [
     { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
+    ...(isProfessor
+      ? [
+          { label: "Panou didactic", path: "/professor", icon: GraduationCap },
+          { label: "Rezervări grupe", path: "/professor/group-booking", icon: Users },
+        ]
+      : []),
     { label: "Resurse & Echipamente", path: "/resources", icon: Cpu },
     { label: "Rezervări", path: "/reservations", icon: Calendar },
     ...(canViewTechnical ? [{ label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench }] : []),

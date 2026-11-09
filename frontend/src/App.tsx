@@ -10,6 +10,8 @@ import { ResourcesPage } from "./pages/ResourcesPage"
 import { ResourceDetailPage } from "./pages/ResourceDetailPage"
 import { ReservationsPage } from "./pages/ReservationsPage"
 import { TechnicalHistoryPage } from "./pages/TechnicalHistoryPage"
+import { ProfessorDashboardPage } from "./pages/ProfessorDashboardPage"
+import { GroupBookingPage } from "./pages/GroupBookingPage"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -92,6 +94,22 @@ export function App() {
             element={
               <ProtectedRoute>
                 <AcademicAdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/professor"
+            element={
+              <ProtectedRoute>
+                <ProfessorDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/professor/group-booking"
+            element={
+              <ProtectedRoute>
+                <GroupBookingPage />
               </ProtectedRoute>
             }
           />
