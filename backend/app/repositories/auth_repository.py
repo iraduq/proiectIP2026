@@ -8,7 +8,7 @@ from app.db.models import Faculty, Role, User, UserRole
 
 class AuthRepository:
     async def get_role_by_name(self, db: AsyncSession, role_name: str) -> Optional[Role]:
-        result = await db.execute(select(Role).where(Role.name == role_name))
+        result = await db.execute(select(Role).where(Role.nume == role_name))
         return result.scalars().first()
 
     async def get_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
@@ -36,7 +36,7 @@ class AuthRepository:
     async def create(self, db: AsyncSession, user_data: UserCreate, password_hash: str) -> User:
         role = await self.get_role_by_name(db, user_data.rol.value)
         if not role:
-            role = Role(name=user_data.rol.value, description=f"Rol {user_data.rol.value}")
+            role = Role(nume=user_data.rol.value, descriere=f"Rol {user_data.rol.value}")
             db.add(role)
             await db.flush()
 
@@ -51,11 +51,11 @@ class AuthRepository:
             nume=full_name,
             email=user_data.email,
             parola_hash=password_hash,
-            role_id=role.id,
+            rol_id=role.id,
             numar_matricol=user_data.numar_matricol,
             id_angajat=user_data.id_angajat,
             facultate_id=resolved_facultate_id,
-            is_active=True,
+            este_activ=True,
         )
         db.add(user)
         await db.flush()

@@ -23,8 +23,8 @@ class AuthService:
 
         hashed_pw = get_password_hash(data.password)
         user = await auth_repository.create(db, data, hashed_pw)
-        permissions = [p.code for p in user.role_rel.permissions] if user.role_rel else []
-        resolved_role = UserRole(user.role_rel.name) if user.role_rel else data.rol
+        permissions = [p.cod for p in user.role_rel.permissions] if user.role_rel else []
+        resolved_role = UserRole(user.role_rel.nume) if user.role_rel else data.rol
 
         return UserResponse(
             id_utilizator=user.id_utilizator,
@@ -36,9 +36,9 @@ class AuthService:
             facultate_id=user.facultate_id,
             facultate_nume=user.faculty.nume if user.faculty else None,
             facultate_cod=user.faculty.cod if user.faculty else None,
-            is_active=user.is_active,
+            is_active=user.este_activ,
             permissions=permissions,
-            created_at=user.created_at,
+            created_at=user.creat_la,
         )
 
     async def login(self, db: AsyncSession, data: LoginSchema) -> Token:
@@ -46,11 +46,11 @@ class AuthService:
         if not user or not verify_password(data.password, user.parola_hash):
             raise InvalidCredentialsError()
 
-        if not user.is_active:
+        if not user.este_activ:
             raise UnauthorizedAccessError("Contul tău a fost dezactivat. Contactează administratorul.")
 
-        permissions = [p.code for p in user.role_rel.permissions] if user.role_rel else []
-        role_name = user.role_rel.name if user.role_rel else UserRole.STUDENT.value
+        permissions = [p.cod for p in user.role_rel.permissions] if user.role_rel else []
+        role_name = user.role_rel.nume if user.role_rel else UserRole.STUDENT.value
 
         token_payload = {
             "sub": str(user.id_utilizator),

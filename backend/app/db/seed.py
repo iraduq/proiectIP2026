@@ -231,20 +231,20 @@ def default_password_hash() -> str:
 
 async def seed_roles_and_permissions(db: AsyncSession) -> None:
     for permission_code, description in PERMISSION_DESCRIPTIONS.items():
-        existing = await db.execute(select(Permission).where(Permission.code == permission_code.value))
+        existing = await db.execute(select(Permission).where(Permission.cod == permission_code.value))
         if not existing.scalars().first():
-            db.add(Permission(code=permission_code.value, description=description))
+            db.add(Permission(cod=permission_code.value, descriere=description))
     await db.flush()
 
     permission_ids = {
-        code: permission_id for code, permission_id in (await db.execute(select(Permission.code, Permission.id))).all()
+        code: permission_id for code, permission_id in (await db.execute(select(Permission.cod, Permission.id))).all()
     }
 
     for role_enum in UserRole:
-        result = await db.execute(select(Role).where(Role.name == role_enum.value))
+        result = await db.execute(select(Role).where(Role.nume == role_enum.value))
         role = result.scalars().first()
         if not role:
-            role = Role(name=role_enum.value, description=f"Rol {role_enum.value}")
+            role = Role(nume=role_enum.value, descriere=f"Rol {role_enum.value}")
             db.add(role)
             await db.flush()
 
@@ -253,11 +253,11 @@ async def seed_roles_and_permissions(db: AsyncSession) -> None:
             for permission in ROLE_PERMISSIONS_MAP.get(role_enum, [])
             if permission.value in permission_ids
         ]
-        await db.execute(delete(role_permissions).where(role_permissions.c.role_id == role.id))
+        await db.execute(delete(role_permissions).where(role_permissions.c.rol_id == role.id))
         if desired_ids:
             await db.execute(
                 insert(role_permissions).values(
-                    [{"role_id": role.id, "permission_id": permission_id} for permission_id in desired_ids]
+                    [{"rol_id": role.id, "permisiune_id": permission_id} for permission_id in desired_ids]
                 )
             )
 
@@ -265,7 +265,7 @@ async def seed_roles_and_permissions(db: AsyncSession) -> None:
 
 
 async def seed_users(db: AsyncSession) -> None:
-    role_ids = {name: role_id for name, role_id in (await db.execute(select(Role.name, Role.id))).all()}
+    role_ids = {name: role_id for name, role_id in (await db.execute(select(Role.nume, Role.id))).all()}
     existing_emails = set((await db.execute(select(User.email))).scalars().all())
     first_faculty = (await db.execute(select(Faculty).order_by(Faculty.id.asc()))).scalars().first()
     faculty_id_for_student = first_faculty.id if first_faculty else None
@@ -278,11 +278,11 @@ async def seed_users(db: AsyncSession) -> None:
                 nume=f"{first_name} {last_name}",
                 email=email,
                 parola_hash=default_password_hash(),
-                role_id=role_ids[role.value],
+                rol_id=role_ids[role.value],
                 numar_matricol=numar_matricol,
                 id_angajat=id_angajat,
                 facultate_id=faculty_id_for_student if role == UserRole.STUDENT else None,
-                is_active=True,
+                este_activ=True,
             )
         )
 
@@ -315,10 +315,10 @@ class StaffFactory:
             nume=f"{first_name} {last_name}",
             email=email,
             parola_hash=self.password_hash,
-            role_id=self.role_ids[role.value],
+            rol_id=self.role_ids[role.value],
             numar_matricol=None,
             id_angajat=self.employee_number,
-            is_active=True,
+            este_activ=True,
         )
         self.db.add(user)
         await self.db.flush()
@@ -341,7 +341,7 @@ class StaffFactory:
 
 
 async def _load_role_ids(db: AsyncSession) -> Optional[dict[str, int]]:
-    result = await db.execute(select(Role.name, Role.id))
+    result = await db.execute(select(Role.nume, Role.id))
     role_ids = {name: role_id for name, role_id in result.all()}
     required = {UserRole.PROFESOR.value, UserRole.RESPONSABIL_LABORATOR.value}
     if not required.issubset(role_ids):
@@ -361,7 +361,7 @@ async def seed_academic_structure(db: AsyncSession) -> None:
         if first_fac and UserRole.STUDENT.value in role_ids:
             await db.execute(
                 update(User)
-                .where(User.role_id == role_ids[UserRole.STUDENT.value], User.facultate_id.is_(None))
+                .where(User.rol_id == role_ids[UserRole.STUDENT.value], User.facultate_id.is_(None))
                 .values(facultate_id=first_fac.id)
             )
             await db.commit()
@@ -380,8 +380,8 @@ async def seed_academic_structure(db: AsyncSession) -> None:
             adresa=institution_seed["adresa"],
             email_contact=institution_seed["email_contact"],
             telefon=institution_seed["telefon"],
-            website=institution_seed["website"],
-            is_active=True,
+            site_web=institution_seed["website"],
+            este_activ=True,
         )
         db.add(institution)
         await db.flush()
@@ -392,7 +392,7 @@ async def seed_academic_structure(db: AsyncSession) -> None:
                 nume=faculty_seed["nume"],
                 cod=faculty_seed["cod"],
                 descriere=faculty_seed["descriere"],
-                is_active=True,
+                este_activ=True,
             )
             db.add(faculty)
             await db.flush()
@@ -408,7 +408,7 @@ async def seed_academic_structure(db: AsyncSession) -> None:
                     cod=department_code,
                     descriere=f"Departamentul {department_name} din cadrul {faculty.nume}.",
                     sef_departament_id=head_id,
-                    is_active=True,
+                    este_activ=True,
                 )
                 db.add(department)
                 await db.flush()
@@ -429,7 +429,7 @@ async def seed_academic_structure(db: AsyncSession) -> None:
                             capacitate=template["capacitate"],
                             descriere=f"{template['nume']} - {department_name}.",
                             responsabil_id=responsible_id,
-                            is_active=True,
+                            este_activ=True,
                         )
                     )
                 await db.flush()
@@ -438,7 +438,7 @@ async def seed_academic_structure(db: AsyncSession) -> None:
         if first_fac and UserRole.STUDENT.value in role_ids:
             await db.execute(
                 update(User)
-                .where(User.role_id == role_ids[UserRole.STUDENT.value], User.facultate_id.is_(None))
+                .where(User.rol_id == role_ids[UserRole.STUDENT.value], User.facultate_id.is_(None))
                 .values(facultate_id=first_fac.id)
             )
         await db.commit()
@@ -644,7 +644,7 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
     for cat_name, cat_desc in categories_data:
         existing = (await db.execute(select(Category).where(Category.nume == cat_name))).scalars().first()
         if not existing:
-            cat = Category(nume=cat_name, descriere=cat_desc, is_active=True)
+            cat = Category(nume=cat_name, descriere=cat_desc, este_activ=True)
             db.add(cat)
             await db.flush()
             cat_map[cat_name] = cat
@@ -803,7 +803,7 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
                     descriere=desc,
                     specificatii=specs,
                     imagine_url=img_url,
-                    is_active=True,
+                    este_activ=True,
                 )
             )
             existing_codes.add(cod)
@@ -827,7 +827,7 @@ async def seed_resources_and_reservations(db: AsyncSession) -> None:
                     descriere=f"Echipament de laborator din categoria {cat_name} ({nume}).",
                     specificatii=specs,
                     imagine_url=img_url,
-                    is_active=True,
+                    este_activ=True,
                 )
             )
             existing_codes.add(cod)
