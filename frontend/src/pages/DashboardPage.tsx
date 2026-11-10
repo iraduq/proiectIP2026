@@ -97,14 +97,23 @@ export function DashboardPage() {
       try {
         const [resCatalog, reservData, quotaData] = await Promise.all([
           resourcesApi.getResources({ limit: 1 }).catch(() => null),
-          reservationsApi.getReservations({ limit: 100 }).catch(() => null),
+          reservationsApi
+            .getReservations(
+              user?.id_utilizator
+                ? { utilizator_id: user.id_utilizator, limit: 100 }
+                : { limit: 100 }
+            )
+            .catch(() => null),
           reservationsApi.getMyQuota().catch(() => null),
         ])
         if (resCatalog && resCatalog.total > 0) {
           setTotalCatalogCount(resCatalog.total)
         }
         if (reservData && reservData.items) {
-          setMyReservations(reservData.items)
+          const ownItems = user?.id_utilizator
+            ? reservData.items.filter((r) => r.utilizator_id === user.id_utilizator)
+            : reservData.items
+          setMyReservations(ownItems)
         }
         if (quotaData) {
           setQuota(quotaData)
@@ -115,10 +124,19 @@ export function DashboardPage() {
       }
     }
     loadData()
-  }, [])
+  }, [user?.id_utilizator])
 
-  const fullName = user?.nume || "Student"
-  const firstName = fullName.split(" ")[0] || "Student"
+  const roleLabel =
+    user?.rol === "PROFESOR"
+      ? "Profesor"
+      : user?.rol === "RESPONSABIL_LABORATOR"
+      ? "Reprezentant laborator"
+      : user?.rol === "ADMINISTRATOR"
+      ? "Administrator"
+      : "Student"
+
+  const fullName = user?.nume || roleLabel
+  const firstName = fullName.split(" ")[0] || roleLabel
   const initials = fullName
     .split(" ")
     .map((p) => p[0])
@@ -195,7 +213,7 @@ export function DashboardPage() {
                 variant="outline"
                 className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-700 text-[11px] font-medium px-2.5 py-0.5"
               >
-                {user?.rol === "STUDENT" || !user?.rol ? "Student" : user.rol}
+                {roleLabel}
               </Badge>
             </div>
             <p className="text-xs text-neutral-500">
@@ -551,7 +569,7 @@ export function DashboardPage() {
                     variant="outline"
                     className="rounded-full bg-neutral-100 border-neutral-200 text-neutral-700 text-[10px] font-medium px-2 py-0 mt-0.5"
                   >
-                    Student
+                    {roleLabel}
                   </Badge>
                 </div>
               </div>
