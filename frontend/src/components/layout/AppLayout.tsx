@@ -94,9 +94,19 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
     user?.rol === "ADMINISTRATOR" ||
     user?.rol === "RESPONSABIL_LABORATOR" ||
     Boolean(user?.permissions?.includes("technical_history:read"))
-  const isLabOrProf = user?.rol === "RESPONSABIL_LABORATOR" || user?.rol === "PROFESOR"
+  const isLabResponsible = user?.rol === "RESPONSABIL_LABORATOR"
+  const isProfessor = user?.rol === "PROFESOR"
 
-  const navItems = isLabOrProf
+  const navItems = isLabResponsible
+    ? [
+        { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
+        { label: "Gestiune laborator", path: "/professor", icon: Building2 },
+        { label: "Catalog resurse", path: "/resources", icon: Cpu },
+        { label: "Rezervări și cereri", path: "/reservations", icon: Calendar },
+        { label: "Jurnal tehnic", path: "/technical-history", icon: Wrench },
+        { label: "Laboratoare și săli", path: "/rooms", icon: DoorOpen },
+      ]
+    : isProfessor
     ? [
         { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
         { label: "Panou departament", path: "/professor", icon: Building2 },
