@@ -7,7 +7,7 @@ from app.utils.roles import PermissionCode
 def user_permission_codes(user: User) -> set[str]:
     if not user.role_rel:
         return set()
-    return {permission.code for permission in user.role_rel.permissions}
+    return {permission.cod for permission in user.role_rel.permissions}
 
 
 def user_has_permission(user: User, permission: PermissionCode) -> bool:
@@ -19,7 +19,7 @@ def is_structure_admin(user: User) -> bool:
 
 
 def is_student(user: User) -> bool:
-    return user.role_rel.name == "STUDENT" if user.role_rel else False
+    return user.role_rel.nume == "STUDENT" if user.role_rel else False
 
 
 def resolve_active_filter(actor: User, requested: Optional[bool], entity_label: str) -> Optional[bool]:

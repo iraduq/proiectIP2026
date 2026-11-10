@@ -34,9 +34,9 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
         sa.Column('nume', sa.String(length=100), nullable=False),
         sa.Column('descriere', sa.String(length=500), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('este_activ', sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column('creat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('actualizat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index(op.f('ix_categorii_resurse_nume'), 'categorii_resurse', ['nume'], unique=True)
@@ -56,9 +56,10 @@ def upgrade() -> None:
             server_default='DISPONIBILA',
         ),
         sa.Column('specificatii', sa.String(length=1000), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('imagine_url', sa.String(length=500), nullable=True),
+        sa.Column('este_activ', sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column('creat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('actualizat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index(op.f('ix_resurse_cod_inventar'), 'resurse', ['cod_inventar'], unique=True)
@@ -81,8 +82,8 @@ def upgrade() -> None:
         ),
         sa.Column('scop', sa.String(length=500), nullable=False),
         sa.Column('motiv_respingere', sa.String(length=500), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('creat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('actualizat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index(op.f('ix_rezervari_resursa_id'), 'rezervari', ['resursa_id'], unique=False)
@@ -100,7 +101,7 @@ def upgrade() -> None:
         sa.Column('descriere', sa.String(length=1000), nullable=False),
         sa.Column('stare_anterioara', sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum', create_type=False), nullable=False),
         sa.Column('stare_noua', sa.Enum('DISPONIBILA', 'DEFECTA', 'IN_MENTENANTA', name='stare_tehnica_enum', create_type=False), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('creat_la', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index(op.f('ix_jurnal_tehnic_resursa_id'), 'jurnal_tehnic', ['resursa_id'], unique=False)
