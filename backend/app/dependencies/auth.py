@@ -43,7 +43,7 @@ async def get_current_user(
 
 def require_roles(*allowed_roles: UserRole) -> Callable:
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        role_name = current_user.role_rel.name if current_user.role_rel else None
+        role_name = current_user.role_rel.nume if current_user.role_rel else None
         allowed_names = [r.value for r in allowed_roles]
         if role_name not in allowed_names:
             raise UnauthorizedAccessError("Nu aveți rolul necesar pentru a efectua această acțiune.")
@@ -54,7 +54,7 @@ def require_roles(*allowed_roles: UserRole) -> Callable:
 
 def require_permission(required_permission: PermissionCode) -> Callable:
     async def permission_checker(current_user: User = Depends(get_current_user)) -> User:
-        user_permissions = [p.code for p in current_user.role_rel.permissions] if current_user.role_rel else []
+        user_permissions = [p.cod for p in current_user.role_rel.permissions] if current_user.role_rel else []
         if required_permission.value not in user_permissions:
             raise UnauthorizedAccessError("Nu aveți permisiunea necesară pentru a efectua această acțiune.")
         return current_user

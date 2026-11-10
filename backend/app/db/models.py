@@ -1,5 +1,4 @@
 import enum
-from datetime import datetime
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -13,7 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declared_attr, relationship, synonym
 from app.db.database import Base
 
 
@@ -47,37 +46,53 @@ class TipSala(str, enum.Enum):
 
 
 class TimestampMixin:
-    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
+    creat_la = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    actualizat_la = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
+
+    @declared_attr
+    def created_at(cls):
+        return synonym("creat_la")
+
+    @declared_attr
+    def updated_at(cls):
+        return synonym("actualizat_la")
 
 
-role_permissions = Table(
-    "role_permissions",
+roluri_permisiuni = Table(
+    "roluri_permisiuni",
     Base.metadata,
-    Column("role_id", Integer, ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
-    Column("permission_id", Integer, ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
+    Column("rol_id", Integer, ForeignKey("roluri.id", ondelete="CASCADE"), primary_key=True),
+    Column("permisiune_id", Integer, ForeignKey("permisiuni.id", ondelete="CASCADE"), primary_key=True),
 )
+
+role_permissions = roluri_permisiuni
 
 
 class Role(Base):
-    __tablename__ = "roles"
+    __tablename__ = "roluri"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), unique=True, nullable=False, index=True)
-    description = Column(String(255), nullable=True)
+    nume = Column(String(50), unique=True, nullable=False, index=True)
+    descriere = Column(String(255), nullable=True)
 
-    permissions = relationship("Permission", secondary=role_permissions, back_populates="roles", lazy="selectin")
+    name = synonym("nume")
+    description = synonym("descriere")
+
+    permissions = relationship("Permission", secondary=roluri_permisiuni, back_populates="roles", lazy="selectin")
     users = relationship("User", back_populates="role_rel")
 
 
 class Permission(Base):
-    __tablename__ = "permissions"
+    __tablename__ = "permisiuni"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    code = Column(String(100), unique=True, nullable=False, index=True)
-    description = Column(String(255), nullable=True)
+    cod = Column(String(100), unique=True, nullable=False, index=True)
+    descriere = Column(String(255), nullable=True)
 
-    roles = relationship("Role", secondary=role_permissions, back_populates="permissions")
+    code = synonym("cod")
+    description = synonym("descriere")
+
+    roles = relationship("Role", secondary=roluri_permisiuni, back_populates="permissions")
 
 
 class User(Base):
@@ -87,13 +102,18 @@ class User(Base):
     nume = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     parola_hash = Column(String(255), nullable=False)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    rol_id = Column(Integer, ForeignKey("roluri.id"), nullable=False)
     numar_matricol = Column(String(100), nullable=True)
     id_angajat = Column(Integer, nullable=True)
     facultate_id = Column(Integer, ForeignKey("facultati.id", ondelete="SET NULL"), nullable=True, index=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
+    este_activ = Column(Boolean, default=True, nullable=False)
+    creat_la = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    actualizat_la = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
+
+    role_id = synonym("rol_id")
+    is_active = synonym("este_activ")
+    created_at = synonym("creat_la")
+    updated_at = synonym("actualizat_la")
 
     role_rel = relationship("Role", back_populates="users", lazy="joined")
     faculty = relationship("Faculty", lazy="joined")
@@ -109,8 +129,11 @@ class Institution(TimestampMixin, Base):
     adresa = Column(String(255), nullable=False)
     email_contact = Column(String(255), nullable=True)
     telefon = Column(String(20), nullable=True)
-    website = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    site_web = Column(String(255), nullable=True)
+    este_activ = Column(Boolean, default=True, nullable=False)
+
+    website = synonym("site_web")
+    is_active = synonym("este_activ")
 
     faculties = relationship("Faculty", back_populates="institution")
 
@@ -127,7 +150,9 @@ class Faculty(TimestampMixin, Base):
     nume = Column(String(255), nullable=False)
     cod = Column(String(30), nullable=False)
     descriere = Column(String(500), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    este_activ = Column(Boolean, default=True, nullable=False)
+
+    is_active = synonym("este_activ")
 
     institution = relationship("Institution", back_populates="faculties")
     departments = relationship("Department", back_populates="faculty")
@@ -148,7 +173,9 @@ class Department(TimestampMixin, Base):
     sef_departament_id = Column(
         Integer, ForeignKey("utilizatori.id_utilizator", ondelete="SET NULL"), nullable=True, index=True
     )
-    is_active = Column(Boolean, default=True, nullable=False)
+    este_activ = Column(Boolean, default=True, nullable=False)
+
+    is_active = synonym("este_activ")
 
     faculty = relationship("Faculty", back_populates="departments")
     sef = relationship("User", foreign_keys=[sef_departament_id])
@@ -174,7 +201,9 @@ class Room(TimestampMixin, Base):
     responsabil_id = Column(
         Integer, ForeignKey("utilizatori.id_utilizator", ondelete="RESTRICT"), nullable=False, index=True
     )
-    is_active = Column(Boolean, default=True, nullable=False)
+    este_activ = Column(Boolean, default=True, nullable=False)
+
+    is_active = synonym("este_activ")
 
     department = relationship("Department", back_populates="rooms")
     responsabil = relationship("User", foreign_keys=[responsabil_id])
@@ -187,7 +216,9 @@ class Category(TimestampMixin, Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     nume = Column(String(100), nullable=False, unique=True, index=True)
     descriere = Column(String(500), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    este_activ = Column(Boolean, default=True, nullable=False)
+
+    is_active = synonym("este_activ")
 
     resources = relationship("Resource", back_populates="category")
 
@@ -206,7 +237,9 @@ class Resource(TimestampMixin, Base):
     )
     specificatii = Column(String(1000), nullable=True)
     imagine_url = Column(String(500), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    este_activ = Column(Boolean, default=True, nullable=False)
+
+    is_active = synonym("este_activ")
 
     category = relationship("Category", back_populates="resources", lazy="joined")
     room = relationship("Room", back_populates="resources", lazy="joined")
@@ -245,7 +278,9 @@ class TechnicalHistory(Base):
     descriere = Column(String(1000), nullable=False)
     stare_anterioara = Column(SAEnum(StareTehnica, name="stare_tehnica_enum"), nullable=False)
     stare_noua = Column(SAEnum(StareTehnica, name="stare_tehnica_enum"), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    creat_la = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+
+    created_at = synonym("creat_la")
 
     resource = relationship("Resource", back_populates="technical_history", lazy="joined")
     user = relationship("User", lazy="joined")
