@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { AppLayout } from "../components/layout/AppLayout"
+import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
 import { reservationsApi } from "../api/reservations"
 import type { Resource, Reservation, StudentQuota } from "../types"
@@ -81,6 +82,7 @@ function buildFiveDays(baseDate: Date, offsetDays: number): DayColumn[] {
 export function ResourceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const resKey = id || "1"
   const catalogMatch = getCatalogItemByIdOrCode(resKey)
@@ -425,7 +427,17 @@ export function ResourceDetailPage() {
 
               <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
                 <Info className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
-                <span>Cotă max. 4 rezervări simultane pe cont student.</span>
+                <span>
+                  Cotă max. 4 rezervări simultane pe cont{" "}
+                  {user?.rol === "PROFESOR"
+                    ? "profesor"
+                    : user?.rol === "RESPONSABIL_LABORATOR"
+                    ? "responsabil"
+                    : user?.rol === "ADMINISTRATOR"
+                    ? "administrator"
+                    : "student"}
+                  .
+                </span>
               </div>
             </Card>
           </div>

@@ -100,7 +100,10 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
 
   const navItems = isLabOrProf
     ? [
-        { label: "Panou departament", path: "/professor", icon: LayoutDashboard },
+        { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
+        { label: "Panou departament", path: "/professor", icon: Building2 },
+        { label: "Catalog resurse", path: "/resources", icon: Cpu },
+        { label: "Rezervările mele", path: "/reservations", icon: Calendar },
         { label: "Aprobări studenți", path: "/professor/approvals", icon: Users },
       ]
     : isAdmin
