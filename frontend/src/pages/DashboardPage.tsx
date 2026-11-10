@@ -619,7 +619,7 @@ export function DashboardPage() {
                   onClick={() => navigate("/rooms")}
                   className="w-full h-9 rounded-xl border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-800"
                 >
-                  Laboratoare & Săli (Localizare)
+                  Laboratoare și săli (localizare)
                 </Button>
                 <Button
                   onClick={() => navigate("/resources")}

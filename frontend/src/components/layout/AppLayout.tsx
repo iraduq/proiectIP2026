@@ -103,7 +103,7 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Panou departament", path: "/professor", icon: Building2 },
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
-        { label: "Laboratoare & Săli", path: "/rooms", icon: DoorOpen },
+        { label: "Laboratoare și săli", path: "/rooms", icon: DoorOpen },
         { label: "Aprobări studenți", path: "/professor/approvals", icon: Users },
       ]
     : isAdmin
@@ -111,15 +111,15 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
-        ...(canViewTechnical ? [{ label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench }] : []),
-        { label: "Laboratoare & Săli", path: "/rooms", icon: DoorOpen },
-        { label: "Structură Academică", path: "/admin/academic", icon: Building2 },
+        ...(canViewTechnical ? [{ label: "Jurnal tehnic", path: "/technical-history", icon: Wrench }] : []),
+        { label: "Laboratoare și săli", path: "/rooms", icon: DoorOpen },
+        { label: "Structură academică", path: "/admin/academic", icon: Building2 },
       ]
     : [
         { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
-        { label: "Laboratoare & Săli", path: "/rooms", icon: DoorOpen },
+        { label: "Laboratoare și săli", path: "/rooms", icon: DoorOpen },
       ]
 
   const totalResults =
@@ -180,7 +180,7 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-1 flex items-center gap-1">
                           <Cpu className="h-3 w-3" />
-                          <span>Echipamente & Resurse</span>
+                          <span>Echipamente și resurse</span>
                         </div>
                         <div className="space-y-0.5">
                           {searchResults.resources.map((res) => (
