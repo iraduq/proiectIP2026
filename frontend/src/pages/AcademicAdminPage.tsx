@@ -365,11 +365,11 @@ export function AcademicAdminPage() {
   }
 
   return (
-    <AppLayout breadcrumbs={["Spațiu de lucru", "Structură Academică"]}>
+    <AppLayout breadcrumbs={["Spațiu de lucru", "Structură academică"]}>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">Structură Academică</h1>
+            <h1 className="text-2xl font-bold text-neutral-900">Structură academică</h1>
             <p className="text-xs text-neutral-500 mt-1">
               {isAdmin
                 ? "Gestiune completă a instituțiilor, facultăților și departamentelor"
@@ -427,7 +427,7 @@ export function AcademicAdminPage() {
                 className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                <span>Adaugă Instituție</span>
+                <span>Adaugă instituție</span>
               </Button>
             )}
 
@@ -438,7 +438,7 @@ export function AcademicAdminPage() {
                 className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                <span>Adaugă Facultate</span>
+                <span>Adaugă facultate</span>
               </Button>
             )}
 
@@ -449,7 +449,7 @@ export function AcademicAdminPage() {
                 className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                <span>Adaugă Departament</span>
+                <span>Adaugă departament</span>
               </Button>
             )}
           </div>
@@ -643,7 +643,7 @@ export function AcademicAdminPage() {
                 <thead className="bg-neutral-50 text-neutral-500 font-semibold border-b border-neutral-100">
                   <tr>
                     <th className="py-3 px-5">Cod</th>
-                    <th className="py-3 px-5">Denumire Facultate</th>
+                    <th className="py-3 px-5">Denumire facultate</th>
                     <th className="py-3 px-5">Instituție</th>
                     <th className="py-3 px-5">Descriere</th>
                     <th className="py-3 px-5">Stare</th>
@@ -724,7 +724,7 @@ export function AcademicAdminPage() {
                     <th className="py-3 px-5">Cod</th>
                     <th className="py-3 px-5">Departament</th>
                     <th className="py-3 px-5">Facultate</th>
-                    <th className="py-3 px-5">Șef Departament</th>
+                    <th className="py-3 px-5">Șef departament</th>
                     <th className="py-3 px-5">Stare</th>
                     {isAdmin && <th className="py-3 px-5 text-right">Acțiuni</th>}
                   </tr>
@@ -802,7 +802,7 @@ export function AcademicAdminPage() {
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="text-base font-bold text-neutral-900">
-                {editingInst ? `Editează ${editingInst.cod}` : "Adaugă Instituție Nouă"}
+                {editingInst ? `Editează ${editingInst.cod}` : "Adaugă instituție nouă"}
               </h3>
               <button
                 onClick={() => setIsInstModalOpen(false)}
@@ -822,7 +822,7 @@ export function AcademicAdminPage() {
             <form onSubmit={handleSaveInstitution} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Cod Instituție</label>
+                  <label className="font-semibold text-neutral-700 block mb-1">Cod instituție</label>
                   <Input
                     type="text"
                     placeholder="ex: UPB"
@@ -846,7 +846,7 @@ export function AcademicAdminPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Denumire Completă</label>
+                <label className="font-semibold text-neutral-700 block mb-1">Denumire completă</label>
                 <Input
                   type="text"
                   placeholder="ex: Universitatea Națională de Știință și Tehnologie Politehnica"
@@ -858,7 +858,7 @@ export function AcademicAdminPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Adresă Sediu</label>
+                <label className="font-semibold text-neutral-700 block mb-1">Adresă sediu</label>
                 <Input
                   type="text"
                   placeholder="ex: Splaiul Independenței nr. 313"
@@ -871,7 +871,7 @@ export function AcademicAdminPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Email Contact</label>
+                  <label className="font-semibold text-neutral-700 block mb-1">Email contact</label>
                   <Input
                     type="email"
                     placeholder="contact@upb.ro"
@@ -918,7 +918,7 @@ export function AcademicAdminPage() {
                   disabled={isSubmitting}
                   className="bg-neutral-900 hover:bg-black text-white"
                 >
-                  {isSubmitting ? "Se salvează..." : "Salvează Instituția"}
+                  {isSubmitting ? "Se salvează..." : "Salvează instituția"}
                 </Button>
               </div>
             </form>
@@ -931,7 +931,7 @@ export function AcademicAdminPage() {
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="text-base font-bold text-neutral-900">
-                {editingFac ? `Editează ${editingFac.cod}` : "Adaugă Facultate Nouă"}
+                {editingFac ? `Editează ${editingFac.cod}` : "Adaugă facultate nouă"}
               </h3>
               <button
                 onClick={() => setIsFacModalOpen(false)}
@@ -969,7 +969,7 @@ export function AcademicAdminPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Cod Facultate</label>
+                  <label className="font-semibold text-neutral-700 block mb-1">Cod facultate</label>
                   <Input
                     type="text"
                     placeholder="ex: ACS"
@@ -980,7 +980,7 @@ export function AcademicAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Denumire Facultate</label>
+                  <label className="font-semibold text-neutral-700 block mb-1">Denumire facultate</label>
                   <Input
                     type="text"
                     placeholder="ex: Automatică și Calculatoare"
@@ -1017,7 +1017,7 @@ export function AcademicAdminPage() {
                   disabled={isSubmitting}
                   className="bg-neutral-900 hover:bg-black text-white"
                 >
-                  {isSubmitting ? "Se salvează..." : "Salvează Facultatea"}
+                  {isSubmitting ? "Se salvează..." : "Salvează facultatea"}
                 </Button>
               </div>
             </form>
@@ -1030,7 +1030,7 @@ export function AcademicAdminPage() {
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="text-base font-bold text-neutral-900">
-                {editingDept ? `Editează ${editingDept.cod}` : "Adaugă Departament Nou"}
+                {editingDept ? `Editează ${editingDept.cod}` : "Adaugă departament nou"}
               </h3>
               <button
                 onClick={() => setIsDeptModalOpen(false)}
@@ -1068,7 +1068,7 @@ export function AcademicAdminPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Cod Departament</label>
+                  <label className="font-semibold text-neutral-700 block mb-1">Cod departament</label>
                   <Input
                     type="text"
                     placeholder="ex: CALCULATOARE"
@@ -1079,7 +1079,7 @@ export function AcademicAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Denumire Departament</label>
+                  <label className="font-semibold text-neutral-700 block mb-1">Denumire departament</label>
                   <Input
                     type="text"
                     placeholder="ex: Calculatoare și Tehnologia Informației"
@@ -1093,7 +1093,7 @@ export function AcademicAdminPage() {
 
               <div>
                 <label className="font-semibold text-neutral-700 block mb-1">
-                  ID Utilizator Șef Departament (Profesor - opțional)
+                  ID utilizator șef departament (profesor - opțional)
                 </label>
                 <Input
                   type="number"
@@ -1129,7 +1129,7 @@ export function AcademicAdminPage() {
                   disabled={isSubmitting}
                   className="bg-neutral-900 hover:bg-black text-white"
                 >
-                  {isSubmitting ? "Se salvează..." : "Salvează Departamentul"}
+                  {isSubmitting ? "Se salvează..." : "Salvează departamentul"}
                 </Button>
               </div>
             </form>
