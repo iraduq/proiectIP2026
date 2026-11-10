@@ -328,7 +328,7 @@ export function ProfessorDashboardPage() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-neutral-200 overflow-hidden">
             <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-sm text-neutral-900">Examinare Cerere de Rezervare</h3>
+                <h3 className="font-bold text-sm text-neutral-900">Examinare cerere de rezervare</h3>
                 <p className="text-xs text-neutral-500 mt-0.5">Decizie de aprobare sau respingere didactică</p>
               </div>
               <button onClick={() => setSelectedRequest(null)} className="text-neutral-400 hover:text-neutral-600">

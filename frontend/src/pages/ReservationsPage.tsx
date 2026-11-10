@@ -201,12 +201,11 @@ export function ReservationsPage() {
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Rezervări"]}>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-200 pb-5">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900 flex items-center gap-2.5">
               <Calendar className="h-6 w-6 text-neutral-800" />
-              Gestiune Rezervări Echipamente
+              Gestiune rezervări echipamente
             </h1>
             <p className="text-sm text-neutral-500 mt-1">
               Programări, cereri de împrumut, aprobări didactice și urmărirea termenelor de restituire.
@@ -214,7 +213,6 @@ export function ReservationsPage() {
           </div>
         </div>
 
-        {/* Action success message */}
         {actionSuccess && (
           <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2">
@@ -227,13 +225,12 @@ export function ReservationsPage() {
           </div>
         )}
 
-        {/* Student Quota Info Card */}
         {isStudent && quota && (
           <div className="p-5 rounded-2xl bg-neutral-900 text-white shadow-md space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">
-                  Cota Ta de Rezervare
+                  Cota ta de rezervare
                 </div>
                 <div className="text-2xl font-bold mt-0.5">
                   {quota.active_count} / {quota.max_limit} resurse active
@@ -252,7 +249,6 @@ export function ReservationsPage() {
               </div>
             </div>
 
-            {/* Visual Progress Bar */}
             <div className="w-full bg-neutral-800 rounded-full h-2.5 overflow-hidden">
               <div
                 className={`h-2.5 rounded-full transition-all duration-500 ${
@@ -264,7 +260,6 @@ export function ReservationsPage() {
           </div>
         )}
 
-        {/* Staff Tabs */}
         {isStaff && (
           <div className="flex border-b border-neutral-200 gap-4">
             <button
@@ -285,7 +280,7 @@ export function ReservationsPage() {
                   : "border-transparent text-neutral-500 hover:text-neutral-900"
               }`}
             >
-              <span>Aprobare & Gestiune Cereri</span>
+              <span>Aprobare și gestiune cereri</span>
               <span className="px-2 py-0.5 text-[10px] rounded-full bg-neutral-100 text-neutral-800 font-bold">
                 {reservations.filter((r) => r.stare === "IN_ASTEPTARE").length} în așteptare
               </span>
@@ -293,7 +288,6 @@ export function ReservationsPage() {
           </div>
         )}
 
-        {/* Filter bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-neutral-200 shadow-sm">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
@@ -323,7 +317,6 @@ export function ReservationsPage() {
           </div>
         </div>
 
-        {/* Reservations Table */}
         <div className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-12 text-center text-neutral-500 space-y-3">
@@ -343,12 +336,12 @@ export function ReservationsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider text-[11px]">
+                <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold text-[11px]">
                   <tr>
-                    <th className="py-3.5 px-4">Echipament & Locație</th>
+                    <th className="py-3.5 px-4">Echipament și locație</th>
                     <th className="py-3.5 px-4">Solicitant</th>
-                    <th className="py-3.5 px-4">Interval Orar Rezervare</th>
-                    <th className="py-3.5 px-4">Scop Didactic / Cercetare</th>
+                    <th className="py-3.5 px-4">Interval orar rezervare</th>
+                    <th className="py-3.5 px-4">Scop didactic / cercetare</th>
                     <th className="py-3.5 px-4">Stare</th>
                     <th className="py-3.5 px-4 text-right">Acțiuni</th>
                   </tr>
@@ -401,7 +394,6 @@ export function ReservationsPage() {
                       <td className="py-3.5 px-4">{getStatusBadge(r.stare)}</td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Student or owner cancel */}
                           {(r.stare === "IN_ASTEPTARE" || r.stare === "APROBATA") &&
                             (r.utilizator_id === user?.id_utilizator || user?.rol === "ADMINISTRATOR") && (
                               <Button
@@ -464,14 +456,13 @@ export function ReservationsPage() {
           )}
         </div>
 
-        {/* Modal Înregistrare Retur Echipament (FR-09) */}
         {returnModalReservation && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-neutral-200 overflow-hidden">
               <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
                 <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-neutral-800" />
-                  Înregistrare Predare / Retur Fizic
+                  Înregistrare predare / retur fizic
                 </h3>
                 <button
                   onClick={() => setReturnModalReservation(null)}
@@ -498,16 +489,16 @@ export function ReservationsPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
-                    Stare echipament la returnare (FR-09)
+                    Stare echipament la returnare
                   </label>
                   <select
                     value={returnCondition}
                     onChange={(e) => setReturnCondition(e.target.value as any)}
                     className="w-full h-9 rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-black"
                   >
-                    <option value="DISPONIBILA">Funcțional / Conform (Disponibil imediat)</option>
-                    <option value="IN_MENTENANTA">Necesită verificare / Mentenanță</option>
-                    <option value="DEFECTA">Defect / Deteriorat în utilizare</option>
+                    <option value="DISPONIBILA">Funcțional / conform (disponibil imediat)</option>
+                    <option value="IN_MENTENANTA">Necesită verificare / mentenanță</option>
+                    <option value="DEFECTA">Defect / deteriorat în utilizare</option>
                   </select>
                 </div>
 
@@ -538,7 +529,7 @@ export function ReservationsPage() {
                     disabled={isSubmittingReturn}
                     className="bg-black hover:bg-neutral-800 text-white text-xs"
                   >
-                    {isSubmittingReturn ? "Se înregistrează..." : "Confirmă Returul"}
+                    {isSubmittingReturn ? "Se înregistrează..." : "Confirmă returul"}
                   </Button>
                 </div>
               </form>
@@ -546,14 +537,13 @@ export function ReservationsPage() {
           </div>
         )}
 
-        {/* Modal Respingere Rezervare */}
         {rejectModalReservation && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-neutral-200 overflow-hidden">
               <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
                 <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                   <XCircle className="h-5 w-5 text-rose-600" />
-                  Respinge Cererea de Rezervare
+                  Respinge cererea de rezervare
                 </h3>
                 <button
                   onClick={() => setRejectModalReservation(null)}

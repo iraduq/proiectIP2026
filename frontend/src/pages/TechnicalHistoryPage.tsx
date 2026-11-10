@@ -28,8 +28,6 @@ export function TechnicalHistoryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("ALL")
-
-  // Modal create
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedResourceId, setSelectedResourceId] = useState<number>(0)
   const [logType, setLogType] = useState("MENTENANTA_PREVENTIVA")
@@ -147,21 +145,21 @@ export function TechnicalHistoryPage() {
 
   if (!canAccess) {
     return (
-      <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal Tehnic"]}>
+      <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal tehnic"]}>
         <div className="p-8 max-w-2xl mx-auto my-12 text-center space-y-4 bg-white rounded-2xl border border-neutral-200 shadow-sm">
           <div className="h-14 w-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
             <ShieldAlert className="h-7 w-7" />
           </div>
-          <h2 className="text-xl font-bold text-neutral-900">Acces Restricționat</h2>
+          <h2 className="text-xl font-bold text-neutral-900">Acces restricționat</h2>
           <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
-            Conform cerințelor PRD (FR-02, FR-11), consultarea și consemnarea în fișele de mentenanță și jurnalul tehnic sunt rezervate exclusiv personalului tehnic autorizat (Responsabili de laborator și Administratori).
+            Consultarea și consemnarea în fișele de mentenanță și jurnalul tehnic sunt rezervate exclusiv personalului tehnic autorizat (responsabili de laborator și administratori).
           </p>
           <div className="pt-2">
             <Button
               onClick={() => window.location.href = "/dashboard"}
               className="text-xs bg-black text-white hover:bg-neutral-800"
             >
-              Înapoi la Panoul de bord
+              Înapoi la panoul de bord
             </Button>
           </div>
         </div>
@@ -170,13 +168,13 @@ export function TechnicalHistoryPage() {
   }
 
   return (
-    <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal Tehnic"]}>
+    <AppLayout breadcrumbs={["Spațiu de lucru", "Jurnal tehnic"]}>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-200 pb-5">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900 flex items-center gap-2.5">
               <Wrench className="h-6 w-6 text-neutral-800" />
-              Jurnal Tehnic & Fișe de Mentenanță
+              Jurnal tehnic și fișe de mentenanță
             </h1>
             <p className="text-sm text-neutral-500 mt-1">
               Istoric complet și imutabil al intervențiilor, reparațiilor și raportărilor de defecțiuni.
@@ -188,12 +186,11 @@ export function TechnicalHistoryPage() {
               className="bg-black hover:bg-neutral-800 text-white gap-2 shadow-sm"
             >
               <Plus className="h-4 w-4" />
-              Înregistrează Intervenție
+              Înregistrează intervenție
             </Button>
           )}
         </div>
 
-        {/* Success Alert */}
         {successMsg && (
           <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2">
@@ -206,7 +203,6 @@ export function TechnicalHistoryPage() {
           </div>
         )}
 
-        {/* Filter Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-neutral-200 shadow-sm">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
@@ -231,12 +227,11 @@ export function TechnicalHistoryPage() {
               <option value="DEFECTIUNE">Defecțiuni</option>
               <option value="REPARATIE">Reparații</option>
               <option value="CALIBRARE">Calibrare</option>
-              <option value="INSTALARE_SOFTWARE">Software / Firmware</option>
+              <option value="INSTALARE_SOFTWARE">Software / firmware</option>
             </select>
           </div>
         </div>
 
-        {/* History Table */}
         <div className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-12 text-center text-neutral-500 space-y-3">
@@ -256,14 +251,14 @@ export function TechnicalHistoryPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider text-[11px]">
+                <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold text-[11px]">
                   <tr>
-                    <th className="py-3.5 px-4">Dată Înregistrare</th>
-                    <th className="py-3.5 px-4">Echipament & Cod</th>
-                    <th className="py-3.5 px-4">Tip Eveniment</th>
-                    <th className="py-3.5 px-4">Descriere Tehnică</th>
-                    <th className="py-3.5 px-4">Tranziție Stare</th>
-                    <th className="py-3.5 px-4">Înregistrat De</th>
+                    <th className="py-3.5 px-4">Dată înregistrare</th>
+                    <th className="py-3.5 px-4">Echipament și cod</th>
+                    <th className="py-3.5 px-4">Tip eveniment</th>
+                    <th className="py-3.5 px-4">Descriere tehnică</th>
+                    <th className="py-3.5 px-4">Tranziție stare</th>
+                    <th className="py-3.5 px-4">Înregistrat de</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 text-neutral-800">
@@ -298,14 +293,13 @@ export function TechnicalHistoryPage() {
           )}
         </div>
 
-        {/* Modal Adăugare Înregistrare Jurnal Tehnic */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-neutral-200 overflow-hidden">
               <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
                 <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                   <Wrench className="h-5 w-5 text-neutral-700" />
-                  Înregistrează În Jurnalul Tehnic
+                  Înregistrează în jurnalul tehnic
                 </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -318,7 +312,7 @@ export function TechnicalHistoryPage() {
               <form onSubmit={handleCreateLog} className="p-6 space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                    Selectează Echipamentul
+                    Selectează echipamentul
                   </label>
                   <select
                     value={selectedResourceId}
@@ -335,36 +329,36 @@ export function TechnicalHistoryPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">Tip Intervenție</label>
+                    <label className="block text-xs font-semibold text-neutral-700 mb-1">Tip intervenție</label>
                     <select
                       value={logType}
                       onChange={(e) => setLogType(e.target.value)}
                       className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs"
                     >
-                      <option value="MENTENANTA_PREVENTIVA">Mentenanță Preventivă</option>
-                      <option value="DEFECTIUNE">Defecțiune Semnalată</option>
-                      <option value="REPARATIE">Reparație / Piese Schimb</option>
-                      <option value="CALIBRARE">Calibrare / Ajustare Parametri</option>
-                      <option value="INSTALARE_SOFTWARE">Actualizare Software/Firmware</option>
+                      <option value="MENTENANTA_PREVENTIVA">Mentenanță preventivă</option>
+                      <option value="DEFECTIUNE">Defecțiune semnalată</option>
+                      <option value="REPARATIE">Reparație / piese schimb</option>
+                      <option value="CALIBRARE">Calibrare / ajustare parametri</option>
+                      <option value="INSTALARE_SOFTWARE">Actualizare software / firmware</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">Stare Nouă Rezultată</label>
+                    <label className="block text-xs font-semibold text-neutral-700 mb-1">Stare nouă rezultată</label>
                     <select
                       value={logState}
                       onChange={(e) => setLogState(e.target.value as StareTehnica)}
                       className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-xs"
                     >
-                      <option value="DISPONIBILA">Disponibilă (Operațională)</option>
-                      <option value="IN_MENTENANTA">În Mentenanță</option>
-                      <option value="DEFECTA">Defectă (Inoperabilă)</option>
+                      <option value="DISPONIBILA">Disponibilă (operațională)</option>
+                      <option value="IN_MENTENANTA">În mentenanță</option>
+                      <option value="DEFECTA">Defectă (inoperabilă)</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                    Descriere Detaliată a Intervenției
+                    Descriere detaliată a intervenției
                   </label>
                   <textarea
                     required
@@ -390,7 +384,7 @@ export function TechnicalHistoryPage() {
                     disabled={isSubmitting || !logDesc.trim()}
                     className="bg-black hover:bg-neutral-800 text-white text-xs"
                   >
-                    {isSubmitting ? "Se înregistrează..." : "Salvează Eveniment"}
+                    {isSubmitting ? "Se înregistrează..." : "Salvează eveniment"}
                   </Button>
                 </div>
               </form>
