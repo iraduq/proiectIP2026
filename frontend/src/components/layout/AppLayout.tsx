@@ -103,6 +103,7 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Panou departament", path: "/professor", icon: Building2 },
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
+        { label: "Laboratoare & Săli", path: "/rooms", icon: DoorOpen },
         { label: "Aprobări studenți", path: "/professor/approvals", icon: Users },
       ]
     : isAdmin
@@ -111,13 +112,14 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
         ...(canViewTechnical ? [{ label: "Jurnal Tehnic", path: "/technical-history", icon: Wrench }] : []),
-        { label: "Săli de cercetare", path: "/rooms", icon: DoorOpen },
+        { label: "Laboratoare & Săli", path: "/rooms", icon: DoorOpen },
         { label: "Structură Academică", path: "/admin/academic", icon: Building2 },
       ]
     : [
         { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
+        { label: "Laboratoare & Săli", path: "/rooms", icon: DoorOpen },
       ]
 
   const totalResults =
