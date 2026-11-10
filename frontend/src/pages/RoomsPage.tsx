@@ -1,464 +1,940 @@
-import { useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
+import { AppLayout } from "../components/layout/AppLayout"
 import { academicApi } from "../api/academic"
 import { useAuth } from "../context/AuthContext"
-import { AppLayout } from "../components/layout/AppLayout"
+import { ALL_CATALOG_ITEMS } from "../data/catalogItems"
+import type { Room, Department, Faculty } from "../types"
 import { Button } from "../components/ui/button"
-import { Card } from "../components/ui/card"
-import { Badge } from "../components/ui/badge"
 import { Input } from "../components/ui/input"
-import type { Department, Faculty, Institution, Room, TipSala } from "../types"
+import { Badge } from "../components/ui/badge"
+import { Card } from "../components/ui/card"
 import {
-  Search,
-  UserCheck,
-  ChevronLeft,
-  ChevronRight,
+  DoorOpen,
   Plus,
-  Pencil,
-  Power,
-  Trash2,
+  Search,
+  Edit2,
+  MapPin,
+  Users,
+  Building2,
   X,
-  AlertCircle,
-  Filter,
-  RotateCcw,
-  SlidersHorizontal,
+  Compass,
+  Clock,
+  UserCheck,
+  Cpu,
+  Navigation,
+  ChevronRight,
+  Layers,
+  CheckCircle2,
 } from "lucide-react"
+
+interface LabLocationMeta {
+  shortCode: string
+  building: string
+  wing: string
+  directions: string
+  schedule: string
+  accessNote: string
+  coordinator: string
+  coordinatorEmail: string
+  catalogRoomKey: string
+}
+
+const LAB_LOCATION_METADATA: Record<string, LabLocationMeta> = {
+  "UPT-AC-CTI-L1": {
+    shortCode: "Lab 204",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa B · Tronson CTI",
+    directions: "Intrarea principală Corp Electro → Scara B → Etajul 2, culoarul din stânga, a doua ușă pe dreapta (sala B204).",
+    schedule: "Luni – Vineri · 08:00 – 20:00",
+    accessNote: "Acces pe bază de legitimație student / card RFID sau rezervare activă",
+    coordinator: "Prof. dr. ing. Dan Georgescu",
+    coordinatorEmail: "dan.georgescu@upt.ro",
+    catalogRoomKey: "Lab 204",
+  },
+  "UPT-AC-CTI-L2": {
+    shortCode: "Lab 210",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa B · Tronson CTI",
+    directions: "Intrarea principală Corp Electro → Scara B → Etajul 2, capătul culoarului spre curtea interioară (sala B210).",
+    schedule: "Luni – Vineri · 08:00 – 20:00",
+    accessNote: "Acces liber în timpul orelor de laborator sau prin rezervare în platformă",
+    coordinator: "Conf. dr. ing. Mihai Radu",
+    coordinatorEmail: "mihai.radu@upt.ro",
+    catalogRoomKey: "Lab 210",
+  },
+  "UPT-AC-CTI-S1": {
+    shortCode: "Sala Servere",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa B · Subsol Tehnic",
+    directions: "Coborâre pe Scara B până la Subsol (-1) → Ușa securizată DataCenter (acces asistat de administratorul de rețea).",
+    schedule: "24/7 (Acces fizic asistat 08:00 – 18:00)",
+    accessNote: "Conectare remote SSH/VPN pentru nodurile GPU; acces fizic cu aprobare",
+    coordinator: "Ing. Vlad Munteanu",
+    coordinatorEmail: "vlad.munteanu@upt.ro",
+    catalogRoomKey: "Sala Servere",
+  },
+  "UPT-AC-IS-L1": {
+    shortCode: "Lab Prototipare",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa A · Parter",
+    directions: "Intrarea dinspre Parcul Rozelor (Aripa A) → Parter, prima sală pe dreapta lângă atelierul de mecatronică.",
+    schedule: "Luni – Vineri · 08:00 – 19:00",
+    accessNote: "Instructaj scurt SSM la prima utilizare a imprimantelor 3D / CNC",
+    coordinator: "Ș.l. dr. ing. Elena Ionescu",
+    coordinatorEmail: "elena.ionescu@upt.ro",
+    catalogRoomKey: "Lab Prototipare",
+  },
+  "UPT-AC-IS-L2": {
+    shortCode: "Lab 208",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa A · Etaj 1",
+    directions: "Scara principală Aripa A → Etajul 1, vizavi de avizierul Departamentului Automatică și Informatică Aplicată.",
+    schedule: "Luni – Vineri · 08:00 – 20:00",
+    accessNote: "Acces pe bază de rezervare pentru brațele robotice și roverele autonome",
+    coordinator: "Prof. dr. ing. Cristian Toma",
+    coordinatorEmail: "cristian.toma@upt.ro",
+    catalogRoomKey: "Lab 208",
+  },
+  "UPT-ETcTI-EA-L1": {
+    shortCode: "Lab 105",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa C · Etaj 1 (Electronică)",
+    directions: "Intrarea Aripa C → Etajul 1, a treia sală pe partea stângă (Laborator Măsurări & Osciloscoape).",
+    schedule: "Luni – Vineri · 08:00 – 20:00",
+    accessNote: "Sondele și kiturile RF se preiau de la tehnicianul sălii 105",
+    coordinator: "Conf. dr. ing. Andrei Marin",
+    coordinatorEmail: "andrei.marin@upt.ro",
+    catalogRoomKey: "Lab 105",
+  },
+  "UPT-ETcTI-COM-L1": {
+    shortCode: "Lab 305",
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: "Aripa C · Etaj 2 (Comunicații)",
+    directions: "Intrarea Aripa C → Etajul 2, sala C305 lângă laboratorul de rețele optice și radiocomunicații.",
+    schedule: "Luni – Vineri · 08:00 – 19:00",
+    accessNote: "Echipamentele de fibră optică și analiză spectrală necesită rezervare prealabilă",
+    coordinator: "Prof. dr. ing. Sorin Dumitrescu",
+    coordinatorEmail: "sorin.dumitrescu@upt.ro",
+    catalogRoomKey: "Lab 305",
+  },
+}
+
+const DEFAULT_FALLBACK_ROOMS: Room[] = [
+  {
+    id: 1,
+    departament_id: 1,
+    departament_nume: "Departamentul Calculatoare și Tehnologia Informației",
+    facultate_id: 1,
+    facultate_nume: "Facultatea de Automatică și Calculatoare",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "Laborator Inteligență Artificială și Cloud Computing (Lab 204)",
+    cod: "UPT-AC-CTI-L1",
+    tip_sala: "LABORATOR",
+    etaj: 2,
+    capacitate: 28,
+    descriere: "Stații grafice Deep Learning RTX 4090, servere GPU și kituri Edge AI Jetson.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Prof. dr. ing. Dan Georgescu",
+      email: "dan.georgescu@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+  {
+    id: 2,
+    departament_id: 1,
+    departament_nume: "Departamentul Calculatoare și Tehnologia Informației",
+    facultate_id: 1,
+    facultate_nume: "Facultatea de Automatică și Calculatoare",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "Laborator Sisteme Încorporate și Arhitectura Calculatoarelor (Lab 210)",
+    cod: "UPT-AC-CTI-L2",
+    tip_sala: "LABORATOR",
+    etaj: 2,
+    capacitate: 24,
+    descriere: "Plăci FPGA Xilinx Zynq, kituri STM32 Nucleo, Raspberry Pi 5 și analizoare logice.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Conf. dr. ing. Mihai Radu",
+      email: "mihai.radu@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+  {
+    id: 3,
+    departament_id: 1,
+    departament_nume: "Departamentul Calculatoare și Tehnologia Informației",
+    facultate_id: 1,
+    facultate_nume: "Facultatea de Automatică și Calculatoare",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "DataCenter & Cluster HPC Cercetare (Sala Servere)",
+    cod: "UPT-AC-CTI-S1",
+    tip_sala: "SALA_CERCETARE",
+    etaj: -1,
+    capacitate: 10,
+    descriere: "Noduri HPC NVIDIA A100/H100, servere de virtualizare Proxmox și stocare NVMe.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Ing. Vlad Munteanu",
+      email: "vlad.munteanu@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+  {
+    id: 4,
+    departament_id: 2,
+    departament_nume: "Departamentul Automatică și Informatică Aplicată",
+    facultate_id: 1,
+    facultate_nume: "Facultatea de Automatică și Calculatoare",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "Laborator Prototipare Rapidă, FabLab & Imprimare 3D",
+    cod: "UPT-AC-IS-L1",
+    tip_sala: "LABORATOR",
+    etaj: 0,
+    capacitate: 20,
+    descriere: "Imprimante 3D Bambu Lab X1C, Prusa MK4, Formlabs SLA, gravator laser și CNC.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Ș.l. dr. ing. Elena Ionescu",
+      email: "elena.ionescu@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+  {
+    id: 5,
+    departament_id: 2,
+    departament_nume: "Departamentul Automatică și Informatică Aplicată",
+    facultate_id: 1,
+    facultate_nume: "Facultatea de Automatică și Calculatoare",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "Laborator Robotică, Drone și Sisteme Autonome (Lab 208)",
+    cod: "UPT-AC-IS-L2",
+    tip_sala: "SALA_CERCETARE",
+    etaj: 1,
+    capacitate: 18,
+    descriere: "Brațe robotice Niryo Ned 2, Dobot Magician, rovere ROS2 cu LiDAR și drone.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Prof. dr. ing. Cristian Toma",
+      email: "cristian.toma@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+  {
+    id: 6,
+    departament_id: 3,
+    departament_nume: "Departamentul Electronică Aplicată",
+    facultate_id: 2,
+    facultate_nume: "Facultatea de Electronică, Telecomunicații și Tehnologii Informaționale",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "Laborator Electronică Aplicată, Osciloscoape și RF (Lab 105)",
+    cod: "UPT-ETcTI-EA-L1",
+    tip_sala: "LABORATOR",
+    etaj: 1,
+    capacitate: 26,
+    descriere: "Osciloscoape digitale 4 canale, generatoare de semnal, analizoare de spectru și stații lipit.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Conf. dr. ing. Andrei Marin",
+      email: "andrei.marin@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+  {
+    id: 7,
+    departament_id: 4,
+    departament_nume: "Departamentul Comunicații",
+    facultate_id: 2,
+    facultate_nume: "Facultatea de Electronică, Telecomunicații și Tehnologii Informaționale",
+    institutie_id: 1,
+    institutie_nume: "Universitatea Politehnica Timișoara",
+    nume: "Laborator Rețele Optice, 5G și Comunicații (Lab 305)",
+    cod: "UPT-ETcTI-COM-L1",
+    tip_sala: "LABORATOR",
+    etaj: 2,
+    capacitate: 24,
+    descriere: "Echipamente SDR USRP, aparate de sudură fibră optică, OTDR și routere enterprise.",
+    responsabil: {
+      id_utilizator: 2,
+      nume: "Prof. dr. ing. Sorin Dumitrescu",
+      email: "sorin.dumitrescu@upt.ro",
+    },
+    is_active: true,
+    created_at: "2026-01-10T08:00:00Z",
+    updated_at: "2026-01-10T08:00:00Z",
+  },
+]
+
+function formatFloorLabel(etaj: number): string {
+  if (etaj < 0) return "Subsol"
+  if (etaj === 0) return "Parter"
+  return `Etaj ${etaj}`
+}
+
+function resolveLabMetadata(room: Room): LabLocationMeta {
+  if (LAB_LOCATION_METADATA[room.cod]) {
+    return LAB_LOCATION_METADATA[room.cod]
+  }
+  const nameLower = room.nume.toLowerCase()
+  if (nameLower.includes("204") || nameLower.includes("inteligen")) {
+    return LAB_LOCATION_METADATA["UPT-AC-CTI-L1"]
+  }
+  if (nameLower.includes("210") || nameLower.includes("încorporate")) {
+    return LAB_LOCATION_METADATA["UPT-AC-CTI-L2"]
+  }
+  if (nameLower.includes("server") || nameLower.includes("hpc")) {
+    return LAB_LOCATION_METADATA["UPT-AC-CTI-S1"]
+  }
+  if (nameLower.includes("prototip") || nameLower.includes("3d")) {
+    return LAB_LOCATION_METADATA["UPT-AC-IS-L1"]
+  }
+  if (nameLower.includes("208") || nameLower.includes("robot")) {
+    return LAB_LOCATION_METADATA["UPT-AC-IS-L2"]
+  }
+  if (nameLower.includes("105") || nameLower.includes("electronic")) {
+    return LAB_LOCATION_METADATA["UPT-ETcTI-EA-L1"]
+  }
+  if (nameLower.includes("305") || nameLower.includes("comunica") || nameLower.includes("optic")) {
+    return LAB_LOCATION_METADATA["UPT-ETcTI-COM-L1"]
+  }
+  const floorLabel = formatFloorLabel(room.etaj)
+  return {
+    shortCode: room.cod,
+    building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
+    wing: `Aripa Principală · ${floorLabel}`,
+    directions: `Acces prin intrarea principală Corp Electro → ${floorLabel}, urmând indicatoarele pentru sala ${room.cod}.`,
+    schedule: "Luni – Vineri · 08:00 – 20:00",
+    accessNote: "Acces cu cardul de student / cadru didactic sau rezervare activă",
+    coordinator: room.responsabil?.nume || "Prof. dr. ing. Dan Georgescu",
+    coordinatorEmail: room.responsabil?.email || "dan.georgescu@upt.ro",
+    catalogRoomKey: "Lab 204",
+  }
+}
 
 export function RoomsPage() {
   const { user } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const canEdit =
+    user?.rol === "ADMINISTRATOR" ||
+    user?.rol === "RESPONSABIL_LABORATOR" ||
+    Boolean(user?.permissions?.includes("rooms:write"))
 
   const [rooms, setRooms] = useState<Room[]>([])
-  const [institutions, setInstitutions] = useState<Institution[]>([])
-  const [faculties, setFaculties] = useState<Faculty[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
-
-  const [total, setTotal] = useState(0)
-  const [skip, setSkip] = useState(0)
-  const [limit] = useState(15)
+  const [faculties, setFaculties] = useState<Faculty[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const [search, setSearch] = useState(searchParams.get("search") || "")
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<number | undefined>(undefined)
-  const [selectedFacultyId, setSelectedFacultyId] = useState<number | undefined>(undefined)
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | undefined>(undefined)
-  const [tipSala, setTipSala] = useState<string>("")
-  const [minCapacitate, setMinCapacitate] = useState<string>("")
-  const [maxCapacitate, setMaxCapacitate] = useState<string>("")
-  const [etaj, setEtaj] = useState<string>("")
-  const [statusFilter, setStatusFilter] = useState<string>("")
-  const [sortBy, setSortBy] = useState<string>("cod")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
-  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("")
+  const [selectedFloor, setSelectedFloor] = useState<string>("ALL")
+  const [selectedWing, setSelectedWing] = useState<string>("ALL")
+  const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null)
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<Room | null>(null)
-  const [modalError, setModalError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    departament_id: "",
+    nume: "",
+    cod: "",
+    etaj: "1",
+    capacitate: "24",
+    descriere: "",
+  })
+  const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [formDepartamentId, setFormDepartamentId] = useState<number>(0)
-  const [formCod, setFormCod] = useState("")
-  const [formNume, setFormNume] = useState("")
-  const [formTip, setFormTip] = useState<TipSala>("LABORATOR")
-  const [formEtaj, setFormEtaj] = useState(1)
-  const [formCapacitate, setFormCapacitate] = useState(24)
-  const [formDescriere, setFormDescriere] = useState("")
-  const [formResponsabilId, setFormResponsabilId] = useState<number>(0)
-
-  const isAdmin = user?.rol === "ADMINISTRATOR" || user?.permissions?.includes("structure:manage")
-  const isStudent = user?.rol === "STUDENT"
-
-  useEffect(() => {
-    const q = searchParams.get("search")
-    if (q !== null && q !== search) {
-      setSearch(q)
-      setSkip(0)
+  const fetchInitialData = useCallback(async () => {
+    try {
+      const [deptsRes, facsRes] = await Promise.all([
+        academicApi.getDepartments({ limit: 100 }),
+        academicApi.getFaculties({ limit: 100 }),
+      ])
+      setDepartments(deptsRes.items)
+      setFaculties(facsRes.items)
+    } catch {
     }
-  }, [searchParams])
-
-  useEffect(() => {
-    const loadHierarchy = async () => {
-      try {
-        const [instRes, facRes, deptRes] = await Promise.all([
-          academicApi.getInstitutions({ limit: 100 }),
-          academicApi.getFaculties({ limit: 100 }),
-          academicApi.getDepartments({ limit: 100 }),
-        ])
-        setInstitutions(instRes.items)
-        setFaculties(facRes.items)
-        setDepartments(deptRes.items)
-        if (deptRes.items.length > 0 && formDepartamentId === 0) {
-          setFormDepartamentId(deptRes.items[0].id)
-        }
-      } catch {}
-    }
-    loadHierarchy()
   }, [])
 
-  const availableFaculties = selectedInstitutionId
-    ? faculties.filter((f) => f.institutie_id === selectedInstitutionId)
-    : faculties
-
-  const availableDepartments = selectedFacultyId
-    ? departments.filter((d) => d.facultate_id === selectedFacultyId)
-    : selectedInstitutionId
-    ? departments.filter((d) => d.institutie_id === selectedInstitutionId)
-    : departments
-
-  const loadRooms = async () => {
+  const fetchRooms = useCallback(async () => {
     setIsLoading(true)
     try {
-      const activeParam =
-        statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined
-
-      const data = await academicApi.getRooms({
-        skip,
-        limit,
-        search: search.trim() || undefined,
-        institutie_id: selectedInstitutionId,
-        facultate_id: selectedFacultyId,
-        departament_id: selectedDepartmentId,
-        tip_sala: tipSala || undefined,
-        is_active: activeParam,
-        min_capacitate: minCapacitate ? Number(minCapacitate) : undefined,
-        max_capacitate: maxCapacitate ? Number(maxCapacitate) : undefined,
-        etaj: etaj !== "" ? Number(etaj) : undefined,
-        sort_by: sortBy || undefined,
-        sort_order: sortOrder,
+      const res = await academicApi.getRooms({
+        limit: 100,
+        departament_id: selectedDeptId ? Number(selectedDeptId) : undefined,
       })
-      setRooms(data.items)
-      setTotal(data.total)
+      if (res.items && res.items.length > 0) {
+        setRooms(res.items)
+      } else {
+        setRooms(DEFAULT_FALLBACK_ROOMS)
+      }
     } catch {
+      setRooms(DEFAULT_FALLBACK_ROOMS)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [selectedDeptId])
 
   useEffect(() => {
-    loadRooms()
-  }, [
-    skip,
-    selectedInstitutionId,
-    selectedFacultyId,
-    selectedDepartmentId,
-    tipSala,
-    statusFilter,
-    etaj,
-    sortBy,
-    sortOrder,
-  ])
+    fetchInitialData()
+  }, [fetchInitialData])
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSkip(0)
-    loadRooms()
+  useEffect(() => {
+    fetchRooms()
+  }, [fetchRooms])
+
+  const getDepartmentName = (room: Room) => {
+    if (room.departament_nume) return room.departament_nume
+    const dept = departments.find((d) => d.id === room.departament_id)
+    if (dept) return dept.nume
+    if (room.departament_id === 1) return "Departamentul Calculatoare și Tehnologia Informației"
+    if (room.departament_id === 2) return "Departamentul Automatică și Informatică Aplicată"
+    if (room.departament_id === 3) return "Departamentul Electronică Aplicată"
+    if (room.departament_id === 4) return "Departamentul Comunicații"
+    return "Departament Universitar"
   }
 
-  const handleResetFilters = () => {
-    setSearch("")
-    setSearchParams({})
-    setSelectedInstitutionId(undefined)
-    setSelectedFacultyId(undefined)
-    setSelectedDepartmentId(undefined)
-    setTipSala("")
-    setMinCapacitate("")
-    setMaxCapacitate("")
-    setEtaj("")
-    setStatusFilter("")
-    setSortBy("cod")
-    setSortOrder("asc")
-    setSkip(0)
-  }
-
-  const hasActiveFilters =
-    Boolean(search) ||
-    selectedInstitutionId !== undefined ||
-    selectedFacultyId !== undefined ||
-    selectedDepartmentId !== undefined ||
-    Boolean(tipSala) ||
-    Boolean(minCapacitate) ||
-    Boolean(maxCapacitate) ||
-    etaj !== "" ||
-    Boolean(statusFilter) ||
-    sortBy !== "cod" ||
-    sortOrder !== "asc"
-
-  const openAddModal = () => {
-    setModalError(null)
-    setFormCod("")
-    setFormNume("")
-    setFormTip("LABORATOR")
-    setFormEtaj(1)
-    setFormCapacitate(24)
-    setFormDescriere("")
-    setFormResponsabilId(user?.id_utilizator || 1)
-    if (departments.length > 0) {
-      setFormDepartamentId(departments[0].id)
+  const getFacultyCode = (room: Room) => {
+    const dept = departments.find((d) => d.id === room.departament_id)
+    if (dept) {
+      const fac = faculties.find((f) => f.id === dept.facultate_id)
+      if (fac) return fac.cod
     }
-    setIsAddModalOpen(true)
+    return room.departament_id <= 2 ? "AC" : "ETcTI"
   }
 
-  const handleCreateRoom = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setModalError(null)
-    setIsSubmitting(true)
-    try {
-      await academicApi.createRoom({
-        departament_id: Number(formDepartamentId),
-        cod: formCod.trim().toUpperCase(),
-        nume: formNume.trim(),
-        tip_sala: formTip,
-        etaj: Number(formEtaj),
-        capacitate: Number(formCapacitate),
-        descriere: formDescriere.trim() || null,
-        responsabil_id: Number(formResponsabilId),
-      })
-      setIsAddModalOpen(false)
-      loadRooms()
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || "Eroare la crearea sălii. Verifică datele introduse."
-      setModalError(msg)
-    } finally {
-      setIsSubmitting(false)
-    }
+  const enrichedRooms = useMemo(() => {
+    return rooms.map((room) => {
+      const meta = resolveLabMetadata(room)
+      const floorText = formatFloorLabel(room.etaj)
+      const equipmentInRoom = ALL_CATALOG_ITEMS.filter(
+        (item) => item.roomLabel.toLowerCase() === meta.catalogRoomKey.toLowerCase()
+      )
+      return {
+        room,
+        meta,
+        floorText,
+        equipmentInRoom,
+        deptName: getDepartmentName(room),
+        facCode: getFacultyCode(room),
+      }
+    })
+  }, [rooms, departments, faculties])
+
+  const filteredRooms = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return enrichedRooms.filter(({ room, meta, floorText, equipmentInRoom, deptName }) => {
+      if (selectedDeptId && room.departament_id !== Number(selectedDeptId)) {
+        return false
+      }
+      if (selectedFloor !== "ALL") {
+        if (floorText.toLowerCase() !== selectedFloor.toLowerCase()) {
+          return false
+        }
+      }
+      if (selectedWing !== "ALL") {
+        if (!meta.wing.toLowerCase().includes(selectedWing.toLowerCase())) {
+          return false
+        }
+      }
+      if (!q) return true
+
+      const matchesRoomText =
+        room.nume.toLowerCase().includes(q) ||
+        room.cod.toLowerCase().includes(q) ||
+        meta.shortCode.toLowerCase().includes(q) ||
+        meta.building.toLowerCase().includes(q) ||
+        meta.wing.toLowerCase().includes(q) ||
+        meta.directions.toLowerCase().includes(q) ||
+        meta.coordinator.toLowerCase().includes(q) ||
+        floorText.toLowerCase().includes(q) ||
+        deptName.toLowerCase().includes(q) ||
+        (room.descriere || "").toLowerCase().includes(q)
+
+      const matchesEquipment = equipmentInRoom.some(
+        (eq) =>
+          eq.name.toLowerCase().includes(q) ||
+          eq.code.toLowerCase().includes(q) ||
+          eq.categoryTag.toLowerCase().includes(q)
+      )
+
+      return matchesRoomText || matchesEquipment
+    })
+  }, [enrichedRooms, search, selectedDeptId, selectedFloor, selectedWing])
+
+  const openCreateModal = () => {
+    setEditingRoom(null)
+    setFormError(null)
+    setFormData({
+      departament_id: departments[0]?.id ? String(departments[0].id) : "1",
+      nume: "",
+      cod: "",
+      etaj: "1",
+      capacitate: "24",
+      descriere: "",
+    })
+    setIsModalOpen(true)
   }
 
   const openEditModal = (room: Room) => {
     setEditingRoom(room)
-    setModalError(null)
-    setFormCod(room.cod)
-    setFormNume(room.nume)
-    setFormTip(room.tip_sala)
-    setFormEtaj(room.etaj)
-    setFormCapacitate(room.capacitate)
-    setFormDescriere(room.descriere || "")
-    setIsEditModalOpen(true)
+    setFormError(null)
+    setFormData({
+      departament_id: String(room.departament_id),
+      nume: room.nume,
+      cod: room.cod,
+      etaj: String(room.etaj ?? 1),
+      capacitate: String(room.capacitate ?? 24),
+      descriere: room.descriere || "",
+    })
+    setIsModalOpen(true)
   }
 
-  const handleUpdateRoom = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingRoom) return
-    setModalError(null)
+    setFormError(null)
     setIsSubmitting(true)
+
     try {
-      const payload = isAdmin
-        ? {
-            nume: formNume.trim(),
-            cod: formCod.trim().toUpperCase(),
-            tip_sala: formTip,
-            etaj: Number(formEtaj),
-            capacitate: Number(formCapacitate),
-            descriere: formDescriere.trim() || null,
-          }
-        : {
-            capacitate: Number(formCapacitate),
-            descriere: formDescriere.trim() || null,
-          }
-      await academicApi.updateRoom(editingRoom.id, payload)
-      setIsEditModalOpen(false)
-      loadRooms()
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || "Eroare la modificarea sălii."
-      setModalError(msg)
+      const etajNum = Number(formData.etaj) || 0
+      const capNum = Number(formData.capacitate) || 20
+
+      if (editingRoom) {
+        await academicApi.updateRoom(editingRoom.id, {
+          nume: formData.nume.trim(),
+          cod: formData.cod.trim().toUpperCase(),
+          tip_sala: editingRoom.tip_sala || "LABORATOR",
+          etaj: etajNum,
+          capacitate: capNum,
+          descriere: formData.descriere.trim() || null,
+        })
+      } else {
+        await academicApi.createRoom({
+          departament_id: Number(formData.departament_id),
+          nume: formData.nume.trim(),
+          cod: formData.cod.trim().toUpperCase(),
+          tip_sala: "LABORATOR",
+          etaj: etajNum,
+          capacitate: capNum,
+          descriere: formData.descriere.trim() || null,
+          responsabil_id: user?.id_utilizator || 1,
+        })
+      }
+
+      setIsModalOpen(false)
+      fetchRooms()
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } } }
+      setFormError(errorObj.response?.data?.detail || "Eroare la salvarea laboratorului.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleToggleActive = async (room: Room) => {
-    try {
-      if (room.is_active) {
-        await academicApi.deactivateRoom(room.id)
-      } else {
-        await academicApi.activateRoom(room.id)
-      }
-      loadRooms()
-    } catch (err: any) {
-      alert(err.response?.data?.detail || "Eroare la schimbarea stării sălii.")
-    }
-  }
-
-  const handleDeleteRoom = async (room: Room) => {
-    if (!confirm(`Ești sigur că vrei să ștergi sala ${room.cod}?`)) return
-    try {
-      await academicApi.deleteRoom(room.id)
-      loadRooms()
-    } catch (err: any) {
-      alert(err.response?.data?.detail || "Eroare la ștergerea sălii.")
-    }
-  }
-
-  const totalPages = Math.ceil(total / limit)
-  const currentPage = Math.floor(skip / limit) + 1
+  const floorOptions = ["ALL", "Subsol", "Parter", "Etaj 1", "Etaj 2"]
+  const wingOptions = [
+    { id: "ALL", label: "Toate aripile din campus" },
+    { id: "Aripa A", label: "Aripa A (Automatică & FabLab)" },
+    { id: "Aripa B", label: "Aripa B (Calculatoare & AI)" },
+    { id: "Aripa C", label: "Aripa C (Electronică & Comunicații)" },
+  ]
 
   return (
-    <AppLayout breadcrumbs={["Spațiu de lucru", "Săli de cercetare"]}>
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">Săli de cercetare & Laboratoare</h1>
-            <p className="text-xs text-neutral-500 mt-1">
-              {isStudent
-                ? `Spații și laboratoare din cadrul ${user?.facultate_nume || "facultății tale"}`
-                : isAdmin
-                ? "Administrează, adaugă, modifică și filtrează avansat sălile din sistem"
-                : "Consultă detaliile și disponibilitatea spațiilor"}{" "}
-              ({total} săli găsite)
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAdvancedFiltersOpen(!isAdvancedFiltersOpen)}
-              className={`h-9 text-xs flex items-center gap-1.5 ${
-                isAdvancedFiltersOpen ? "bg-neutral-100 border-neutral-400" : ""
-              }`}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Filtre Avansate</span>
-              {hasActiveFilters && (
-                <span className="h-2 w-2 rounded-full bg-indigo-600"></span>
-              )}
-            </Button>
-
-            {isAdmin && (
+    <AppLayout breadcrumbs={["Spațiu de lucru", "Laboratoare & Săli"]}>
+      <div className="max-w-7xl mx-auto space-y-5">
+        <Card className="rounded-2xl border-neutral-200 bg-white p-6 shadow-none">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge className="rounded-full bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5">
+                  LOCALIZARE CAMPUS
+                </Badge>
+                <span className="text-xs text-neutral-500 font-medium">
+                  Corp Electro · Bd. Vasile Pârvan nr. 2
+                </span>
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+                Laboratoare & Săli de Cercetare
+              </h1>
+              <p className="text-xs text-neutral-500 max-w-2xl">
+                Caută rapid unde se află un laborator în campus (aripă, etaj, indicații de orientare),
+                verifică programul de acces, cadrul didactic responsabil și ce echipamente poți rezerva în fiecare sală.
+              </p>
+            </div>
+            {canEdit && (
               <Button
-                onClick={openAddModal}
-                className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 shadow-sm"
+                onClick={openCreateModal}
+                className="rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white h-9 px-4 text-xs font-semibold gap-1.5 shrink-0"
               >
-                <Plus className="h-4 w-4" />
-                <span>Adaugă Sală</span>
+                <Plus className="h-3.5 w-3.5" />
+                Adaugă laborator
               </Button>
             )}
           </div>
-        </div>
 
-        <Card className="rounded-2xl border-neutral-200 shadow-sm p-4 bg-white space-y-4">
-          <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-400" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-neutral-100">
+            <div className="rounded-xl bg-neutral-50 border border-neutral-200/70 p-3">
+              <div className="text-[11px] text-neutral-500 font-medium">Laboratoare active</div>
+              <div className="text-lg font-bold text-neutral-900 mt-0.5">{rooms.length} săli</div>
+              <div className="text-[10px] text-neutral-400">În Corpul Electro (Aripile A, B, C)</div>
+            </div>
+            <div className="rounded-xl bg-neutral-50 border border-neutral-200/70 p-3">
+              <div className="text-[11px] text-neutral-500 font-medium">Program standard acces</div>
+              <div className="text-lg font-bold text-neutral-900 mt-0.5">08:00 – 20:00</div>
+              <div className="text-[10px] text-neutral-400">Luni – Vineri (Card student / Rezervare)</div>
+            </div>
+            <div className="rounded-xl bg-neutral-50 border border-neutral-200/70 p-3">
+              <div className="text-[11px] text-neutral-500 font-medium">Echipamente găzduite</div>
+              <div className="text-lg font-bold text-neutral-900 mt-0.5">
+                {ALL_CATALOG_ITEMS.length} resurse
+              </div>
+              <div className="text-[10px] text-neutral-400">Distribuite în sălile de laborator</div>
+            </div>
+            <div className="rounded-xl bg-neutral-50 border border-neutral-200/70 p-3">
+              <div className="text-[11px] text-neutral-500 font-medium">Punct predare / ridicare</div>
+              <div className="text-lg font-bold text-neutral-900 mt-0.5">La sala indicată</div>
+              <div className="text-[10px] text-neutral-400">Pe baza rezervării din platformă</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl border-neutral-200 bg-white p-5 shadow-none space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <div className="md:col-span-6 relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
               <Input
-                type="text"
-                placeholder="Caută după cod (ex: SALA-101) sau nume..."
+                placeholder="Caută unde e laboratorul (ex: Lab 204, Lab 105, Robotică, RTX 4090, Bambu X1, etaj...)"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-9 text-xs bg-neutral-50 border-neutral-200"
+                className="pl-9 h-9 text-xs rounded-xl border-neutral-200"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
-            <select
-              value={tipSala}
-              onChange={(e) => {
-                setTipSala(e.target.value)
-                setSkip(0)
-              }}
-              className="h-9 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 text-xs text-neutral-800 focus:outline-none"
-            >
-              <option value="">Toate tipurile</option>
-              <option value="LABORATOR">Laborator</option>
-              <option value="SALA_CERCETARE">Sală Cercetare</option>
-              <option value="ATELIER">Atelier</option>
-              <option value="SALA_SERVERE">Sală Servere</option>
-              <option value="DEPOZIT">Depozit</option>
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value)
-                setSkip(0)
-              }}
-              className="h-9 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 text-xs text-neutral-800 focus:outline-none"
-            >
-              <option value="">Toate stările</option>
-              <option value="active">Doar active</option>
-              <option value="inactive">Doar inactive</option>
-            </select>
-
-            <Button type="submit" size="sm" className="h-9 text-xs bg-neutral-900 hover:bg-black font-semibold">
-              Caută
-            </Button>
-
-            {hasActiveFilters && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleResetFilters}
-                className="h-9 text-xs text-neutral-600 hover:text-neutral-900 flex items-center gap-1.5"
+            <div className="md:col-span-3">
+              <select
+                value={selectedWing}
+                onChange={(e) => setSelectedWing(e.target.value)}
+                className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Resetează</span>
-              </Button>
-            )}
-          </form>
+                {wingOptions.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {isAdvancedFiltersOpen && (
-            <div className="pt-3 border-t border-neutral-100 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-              {!isStudent && (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-neutral-500">Instituție</label>
-                    <select
-                      value={selectedInstitutionId || ""}
-                      onChange={(e) => {
-                        const val = e.target.value ? Number(e.target.value) : undefined
-                        setSelectedInstitutionId(val)
-                        setSelectedFacultyId(undefined)
-                        setSelectedDepartmentId(undefined)
-                        setSkip(0)
-                      }}
-                      className="w-full h-8 rounded-md border border-neutral-200 bg-neutral-50 px-2 text-xs"
-                    >
-                      <option value="">Toate instituțiile</option>
-                      {institutions.map((i) => (
-                        <option key={i.id} value={i.id}>
-                          {i.nume} ({i.cod})
-                        </option>
-                      ))}
-                    </select>
+            <div className="md:col-span-3">
+              <select
+                value={selectedDeptId}
+                onChange={(e) => setSelectedDeptId(e.target.value)}
+                className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              >
+                <option value="">Toate departamentele</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.nume} ({d.cod})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-neutral-500 mr-1">Filtru rapid etaj:</span>
+              {floorOptions.map((floor) => {
+                const active = selectedFloor === floor
+                return (
+                  <button
+                    key={floor}
+                    type="button"
+                    onClick={() => setSelectedFloor(floor)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      active
+                        ? "bg-neutral-950 text-white"
+                        : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                    }`}
+                  >
+                    {floor === "ALL" ? "Toate etajele" : floor}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="text-xs text-neutral-500 font-medium">
+              {filteredRooms.length} {filteredRooms.length === 1 ? "laborator găsit" : "laboratoare găsite"}
+            </div>
+          </div>
+        </Card>
+
+        {isLoading ? (
+          <Card className="rounded-2xl border-neutral-200 bg-white p-12 text-center text-xs text-neutral-400 shadow-none">
+            Se încarcă harta și lista laboratoarelor...
+          </Card>
+        ) : filteredRooms.length === 0 ? (
+          <Card className="rounded-2xl border-neutral-200 bg-white p-12 text-center space-y-3 shadow-none">
+            <DoorOpen className="h-8 w-8 text-neutral-300 mx-auto" />
+            <div className="text-sm font-bold text-neutral-800">
+              Niciun laborator găsit pentru criteriile selectate
+            </div>
+            <p className="text-xs text-neutral-500 max-w-md mx-auto">
+              Încearcă să cauți după indicativul sălii (ex: Lab 204, Lab 208, Lab 105) sau resetează filtrele de etaj și aripă.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearch("")
+                setSelectedFloor("ALL")
+                setSelectedWing("ALL")
+                setSelectedDeptId("")
+              }}
+              className="rounded-xl text-xs"
+            >
+              Resetează toate filtrele
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredRooms.map(({ room, meta, floorText, equipmentInRoom, deptName, facCode }) => {
+              const isExpanded = expandedRoomId === room.id
+              const previewEquipment = isExpanded ? equipmentInRoom : equipmentInRoom.slice(0, 4)
+
+              return (
+                <Card
+                  key={room.id}
+                  className="rounded-2xl border-neutral-200 bg-white p-5 shadow-none flex flex-col justify-between space-y-4 hover:border-neutral-300 transition-colors"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className="rounded-lg bg-neutral-950 text-white text-xs font-bold px-2.5 py-0.5">
+                            {meta.shortCode}
+                          </Badge>
+                          <span className="font-mono text-[11px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
+                            {room.cod}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="rounded-full bg-emerald-50 border-emerald-200 text-emerald-800 text-[10px] font-semibold px-2.5 py-0.5 gap-1"
+                          >
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                            Deschis accesului
+                          </Badge>
+                        </div>
+                        <h2 className="text-base font-bold text-neutral-900 leading-snug pt-1">
+                          {room.nume}
+                        </h2>
+                        <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+                          <Building2 className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                          <span>
+                            Facultatea {facCode} · {deptName}
+                          </span>
+                        </div>
+                      </div>
+
+                      {canEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditModal(room)}
+                          className="h-8 px-2.5 rounded-lg border-neutral-200 text-xs text-neutral-700 shrink-0 gap-1"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          Editează
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl bg-neutral-50 border border-neutral-200/80 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 font-bold text-neutral-900">
+                          <Navigation className="h-3.5 w-3.5 text-neutral-800" />
+                          <span>Unde se află laboratorul & cum ajungi:</span>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="rounded-md bg-white border-neutral-200 text-neutral-800 text-[11px] font-semibold"
+                        >
+                          <MapPin className="h-3 w-3 mr-1 text-neutral-500" />
+                          {floorText}
+                        </Badge>
+                      </div>
+
+                      <div className="text-xs text-neutral-700 font-medium">
+                        {meta.building} — <span className="font-bold text-neutral-900">{meta.wing}</span>
+                      </div>
+
+                      <p className="text-xs text-neutral-600 leading-relaxed bg-white rounded-lg p-2.5 border border-neutral-200/60">
+                        {meta.directions}
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                        <div className="flex items-center gap-1.5 text-neutral-600">
+                          <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                          <span className="truncate">{meta.schedule}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-neutral-600">
+                          <UserCheck className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                          <span className="truncate" title={meta.coordinatorEmail}>
+                            {meta.coordinator}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-neutral-600">
+                          <Users className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                          <span>Capacitate: {room.capacitate || 24} locuri</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+                          <Cpu className="h-3.5 w-3.5 text-neutral-600" />
+                          <span>
+                            Echipamente în {meta.shortCode} ({equipmentInRoom.length} resurse)
+                          </span>
+                        </div>
+                        {equipmentInRoom.length > 4 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedRoomId(isExpanded ? null : room.id)
+                            }
+                            className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-950"
+                          >
+                            {isExpanded
+                              ? "Restrânge lista"
+                              : `Vezi toate (${equipmentInRoom.length})`}
+                          </button>
+                        )}
+                      </div>
+
+                      {previewEquipment.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {previewEquipment.map((item) => (
+                            <div
+                              key={item.id}
+                              onClick={() => navigate(`/resources/${item.id}`)}
+                              className="group flex items-center justify-between gap-2 rounded-xl border border-neutral-200/80 bg-white hover:border-neutral-900 p-2 cursor-pointer transition-colors"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.name}
+                                  className="h-8 w-8 rounded-lg object-cover bg-neutral-100 shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <div className="text-xs font-semibold text-neutral-900 truncate group-hover:underline">
+                                    {item.name}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-400 font-mono">
+                                    {item.code}
+                                  </div>
+                                </div>
+                              </div>
+                              <ChevronRight className="h-3.5 w-3.5 text-neutral-400 group-hover:text-neutral-900 shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-neutral-400 italic">
+                          {room.descriere || "Sală dotată cu stații de lucru și infrastructură de cercetare."}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-neutral-500">Facultate</label>
-                    <select
-                      value={selectedFacultyId || ""}
-                      onChange={(e) => {
-                        const val = e.target.value ? Number(e.target.value) : undefined
-                        setSelectedFacultyId(val)
-                        setSelectedDepartmentId(undefined)
-                        setSkip(0)
-                      }}
-                      className="w-full h-8 rounded-md border border-neutral-200 bg-neutral-50 px-2 text-xs"
+                  <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-neutral-500">
+                      {meta.accessNote}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate("/resources")}
+                      className="h-8 px-3 rounded-xl border-neutral-200 text-xs font-semibold text-neutral-900 hover:bg-neutral-50 shrink-0 gap-1"
                     >
-                      <option value="">Toate facultățile</option>
-                      {availableFaculties.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.nume} ({f.cod})
-                        </option>
-                      ))}
-                    </select>
+                      <Layers className="h-3.5 w-3.5" />
+                      Rezervă echipament din sală
+                    </Button>
                   </div>
-                </>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <Compass className="h-4 w-4 text-neutral-900" />
+                <h2 className="text-base font-bold text-neutral-900">
+                  {editingRoom ? "Editează Laborator / Sală" : "Adaugă Laborator / Sală"}
+                </h2>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
+                  {formError}
+                </div>
               )}
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-neutral-500">Departament</label>
+              <div className="space-y-1.5">
+                <label htmlFor="departament_id" className="text-xs font-semibold text-neutral-700">
+                  Departament
+                </label>
                 <select
-                  value={selectedDepartmentId || ""}
-                  onChange={(e) => {
-                    const val = e.target.value ? Number(e.target.value) : undefined
-                    setSelectedDepartmentId(val)
-                    setSkip(0)
-                  }}
-                  className="w-full h-8 rounded-md border border-neutral-200 bg-neutral-50 px-2 text-xs"
+                  id="departament_id"
+                  required
+                  value={formData.departament_id}
+                  onChange={(e) => setFormData({ ...formData, departament_id: e.target.value })}
+                  className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-sm"
                 >
-                  <option value="">Toate departamentele</option>
-                  {availableDepartments.map((d) => (
+                  <option value="" disabled>
+                    Selectează departamentul
+                  </option>
+                  {departments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.nume} ({d.cod})
                     </option>
@@ -466,574 +942,84 @@ export function RoomsPage() {
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-neutral-500">Etaj</label>
-                <select
-                  value={etaj}
-                  onChange={(e) => {
-                    setEtaj(e.target.value)
-                    setSkip(0)
-                  }}
-                  className="w-full h-8 rounded-md border border-neutral-200 bg-neutral-50 px-2 text-xs"
-                >
-                  <option value="">Toate etajele</option>
-                  <option value="-1">Subsol (-1)</option>
-                  <option value="0">Parter (0)</option>
-                  <option value="1">Etaj 1</option>
-                  <option value="2">Etaj 2</option>
-                  <option value="3">Etaj 3</option>
-                  <option value="4">Etaj 4</option>
-                  <option value="5">Etaj 5</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-neutral-500">Capacitate Min</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="200"
-                  placeholder="Minim"
-                  value={minCapacitate}
-                  onChange={(e) => {
-                    setMinCapacitate(e.target.value)
-                    setSkip(0)
-                  }}
-                  className="h-8 text-xs bg-neutral-50 border-neutral-200"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-neutral-500">Capacitate Max</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="200"
-                  placeholder="Maxim"
-                  value={maxCapacitate}
-                  onChange={(e) => {
-                    setMaxCapacitate(e.target.value)
-                    setSkip(0)
-                  }}
-                  className="h-8 text-xs bg-neutral-50 border-neutral-200"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-neutral-500">Sortează după</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value)
-                    setSkip(0)
-                  }}
-                  className="w-full h-8 rounded-md border border-neutral-200 bg-neutral-50 px-2 text-xs"
-                >
-                  <option value="cod">Cod Sală</option>
-                  <option value="nume">Nume Sală</option>
-                  <option value="capacitate">Capacitate</option>
-                  <option value="etaj">Etaj</option>
-                  <option value="created_at">Data Adăugării</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-neutral-500">Direcție sortare</label>
-                <select
-                  value={sortOrder}
-                  onChange={(e) => {
-                    setSortOrder(e.target.value as "asc" | "desc")
-                    setSkip(0)
-                  }}
-                  className="w-full h-8 rounded-md border border-neutral-200 bg-neutral-50 px-2 text-xs"
-                >
-                  <option value="asc">Crescător (A-Z / 1-9)</option>
-                  <option value="desc">Descrescător (Z-A / 9-1)</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {hasActiveFilters && (
-            <div className="pt-2 flex flex-wrap items-center gap-1.5 text-xs text-neutral-500">
-              <span className="text-[11px] font-medium mr-1">Filtre active:</span>
-              {search && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>Căutare: {search}</span>
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSearch("")} />
-                </Badge>
-              )}
-              {selectedInstitutionId && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>
-                    Instituție: {institutions.find((i) => i.id === selectedInstitutionId)?.cod}
-                  </span>
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => setSelectedInstitutionId(undefined)}
-                  />
-                </Badge>
-              )}
-              {selectedFacultyId && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>
-                    Facultate: {faculties.find((f) => f.id === selectedFacultyId)?.cod}
-                  </span>
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedFacultyId(undefined)} />
-                </Badge>
-              )}
-              {selectedDepartmentId && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>
-                    Departament: {departments.find((d) => d.id === selectedDepartmentId)?.cod}
-                  </span>
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => setSelectedDepartmentId(undefined)}
-                  />
-                </Badge>
-              )}
-              {tipSala && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>Tip: {tipSala}</span>
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setTipSala("")} />
-                </Badge>
-              )}
-              {statusFilter && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>Stare: {statusFilter}</span>
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setStatusFilter("")} />
-                </Badge>
-              )}
-              {etaj !== "" && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>Etaj: {etaj}</span>
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setEtaj("")} />
-                </Badge>
-              )}
-              {(minCapacitate || maxCapacitate) && (
-                <Badge variant="outline" className="bg-neutral-50 flex items-center gap-1 text-[11px]">
-                  <span>
-                    Capacitate: {minCapacitate || "1"} - {maxCapacitate || "200"}
-                  </span>
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => {
-                      setMinCapacitate("")
-                      setMaxCapacitate("")
-                    }}
-                  />
-                </Badge>
-              )}
-            </div>
-          )}
-        </Card>
-
-        <Card className="rounded-2xl border-neutral-200 shadow-sm overflow-hidden">
-          <div className="p-0 overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-neutral-50 text-neutral-500 font-semibold border-b border-neutral-100">
-                <tr>
-                  <th className="py-3 px-5">Cod Sală</th>
-                  <th className="py-3 px-5">Denumire</th>
-                  <th className="py-3 px-5">Tip Sală</th>
-                  <th className="py-3 px-5">Departament</th>
-                  <th className="py-3 px-5">Etaj</th>
-                  <th className="py-3 px-5">Capacitate</th>
-                  <th className="py-3 px-5">Responsabil</th>
-                  <th className="py-3 px-5">Stare</th>
-                  {(isAdmin || user?.rol === "RESPONSABIL_LABORATOR" || user?.rol === "PROFESOR") && (
-                    <th className="py-3 px-5 text-right">Acțiuni</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-neutral-400">
-                      Se încarcă lista de săli conform criteriilor selectate...
-                    </td>
-                  </tr>
-                ) : rooms.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-neutral-400">
-                      Nu a fost găsită nicio sală conform filtrelor aplicate.
-                    </td>
-                  </tr>
-                ) : (
-                  rooms.map((room) => {
-                    const canEdit = isAdmin || room.responsabil?.id_utilizator === user?.id_utilizator
-                    return (
-                      <tr key={room.id} className="hover:bg-neutral-50/60 transition-colors">
-                        <td className="py-3 px-5 font-mono font-bold text-neutral-900">{room.cod}</td>
-                        <td className="py-3 px-5 font-medium text-neutral-800">{room.nume}</td>
-                        <td className="py-3 px-5">
-                          <Badge variant="outline" className="text-[10px] font-semibold">
-                            {room.tip_sala}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-5 text-neutral-500 max-w-[150px] truncate">{room.departament_nume}</td>
-                        <td className="py-3 px-5 text-neutral-600">{room.etaj === 0 ? "Parter" : `Etaj ${room.etaj}`}</td>
-                        <td className="py-3 px-5 text-neutral-600 font-medium">{room.capacitate} locuri</td>
-                        <td className="py-3 px-5 text-neutral-700">
-                          <div className="flex items-center gap-1.5">
-                            <UserCheck className="h-3.5 w-3.5 text-neutral-400" />
-                            <span>{room.responsabil?.nume || "Neatribuit"}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-5">
-                          <Badge variant={room.is_active ? "success" : "secondary"}>
-                            {room.is_active ? "Activă" : "Inactivă"}
-                          </Badge>
-                        </td>
-                        {(isAdmin || canEdit) && (
-                          <td className="py-3 px-5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {canEdit && (
-                                <button
-                                  onClick={() => openEditModal(room)}
-                                  className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded"
-                                  title="Editează sală"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                              {isAdmin && (
-                                <>
-                                  <button
-                                    onClick={() => handleToggleActive(room)}
-                                    className={`p-1.5 rounded ${
-                                      room.is_active
-                                        ? "text-amber-600 hover:bg-amber-50"
-                                        : "text-emerald-600 hover:bg-emerald-50"
-                                    }`}
-                                    title={room.is_active ? "Dezactivează sala" : "Activează sala"}
-                                  >
-                                    <Power className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteRoom(room)}
-                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                                    title="Șterge sală"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="p-4 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
-            <div>
-              Afișate {rooms.length} din {total} săli (Pagina {currentPage} din {totalPages || 1})
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={skip === 0}
-                onClick={() => setSkip(Math.max(0, skip - limit))}
-                className="h-8 text-xs flex items-center gap-1"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Anterior</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={skip + limit >= total}
-                onClick={() => setSkip(skip + limit)}
-                className="h-8 text-xs flex items-center gap-1"
-              >
-                <span>Următor</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-base font-bold text-neutral-900">Adaugă Sală Nouă</h3>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{modalError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleCreateRoom} className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Departament afiliat</label>
-                <select
-                  value={formDepartamentId}
-                  onChange={(e) => setFormDepartamentId(Number(e.target.value))}
-                  className="w-full h-9 rounded-lg border border-neutral-200 px-3 bg-neutral-50 text-xs"
-                  required
-                >
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.nume} ({d.cod}) - {d.facultate_nume}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {!isAdmin && (
-                <div className="p-3 rounded-xl bg-neutral-100 border border-neutral-200 text-xs text-neutral-700">
-                  În calitate de responsabil de sală, puteți actualiza capacitatea și descrierea conform regulamentului. Modificarea codului, numelui sau etajului este rezervată administratorilor.
-                </div>
-              )}
-
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Cod Sală</label>
+                <div className="space-y-1.5">
+                  <label htmlFor="cod" className="text-xs font-semibold text-neutral-700">
+                    Cod Sală / Indicativ
+                  </label>
                   <Input
-                    type="text"
-                    placeholder="ex: LAB-201"
-                    value={formCod}
-                    onChange={(e) => setFormCod(e.target.value)}
+                    id="cod"
                     required
-                    disabled={!isAdmin}
-                    className="h-9 text-xs disabled:opacity-60 disabled:bg-neutral-100"
+                    placeholder="UPT-AC-CTI-L1"
+                    value={formData.cod}
+                    onChange={(e) => setFormData({ ...formData, cod: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Denumire Sală</label>
+                <div className="space-y-1.5">
+                  <label htmlFor="etaj" className="text-xs font-semibold text-neutral-700">
+                    Etaj (-1 Subsol, 0 Parter, 1, 2)
+                  </label>
                   <Input
-                    type="text"
-                    placeholder="ex: Laborator Rețele"
-                    value={formNume}
-                    onChange={(e) => setFormNume(e.target.value)}
-                    required
-                    disabled={!isAdmin}
-                    className="h-9 text-xs disabled:opacity-60 disabled:bg-neutral-100"
+                    id="etaj"
+                    type="number"
+                    min={-2}
+                    max={10}
+                    placeholder="2"
+                    value={formData.etaj}
+                    onChange={(e) => setFormData({ ...formData, etaj: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Tip Sală</label>
-                  <select
-                    value={formTip}
-                    onChange={(e) => setFormTip(e.target.value as TipSala)}
-                    disabled={!isAdmin}
-                    className="w-full h-9 rounded-lg border border-neutral-200 px-2 bg-neutral-50 text-xs disabled:opacity-60 disabled:bg-neutral-100"
-                  >
-                    <option value="LABORATOR">Laborator</option>
-                    <option value="SALA_CERCETARE">Sală Cercetare</option>
-                    <option value="ATELIER">Atelier</option>
-                    <option value="SALA_SERVERE">Sală Servere</option>
-                    <option value="DEPOZIT">Depozit</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Etaj</label>
-                  <Input
-                    type="number"
-                    min="-3"
-                    max="30"
-                    value={formEtaj}
-                    onChange={(e) => setFormEtaj(Number(e.target.value))}
-                    required
-                    disabled={!isAdmin}
-                    className="h-9 text-xs disabled:opacity-60 disabled:bg-neutral-100"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Capacitate</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="200"
-                    value={formCapacitate}
-                    onChange={(e) => setFormCapacitate(Number(e.target.value))}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-neutral-700 block mb-1">ID Responsabil (Personal/Profesor)</label>
+              <div className="space-y-1.5">
+                <label htmlFor="nume" className="text-xs font-semibold text-neutral-700">
+                  Denumire Laborator
+                </label>
                 <Input
-                  type="number"
-                  min="1"
-                  value={formResponsabilId}
-                  onChange={(e) => setFormResponsabilId(Number(e.target.value))}
+                  id="nume"
                   required
-                  className="h-9 text-xs"
+                  placeholder="Laborator Inteligență Artificială (Lab 204)"
+                  value={formData.nume}
+                  onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
                 />
               </div>
 
-              <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Descriere (opțional)</label>
-                <textarea
-                  value={formDescriere}
-                  onChange={(e) => setFormDescriere(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-lg border border-neutral-200 p-2 text-xs bg-neutral-50 focus:bg-white focus:outline-none"
-                  placeholder="Detalii suplimentare despre echipamente sau destinație..."
+              <div className="space-y-1.5">
+                <label htmlFor="capacitate" className="text-xs font-semibold text-neutral-700">
+                  Capacitate (locuri de lucru)
+                </label>
+                <Input
+                  id="capacitate"
+                  type="number"
+                  min={1}
+                  placeholder="28"
+                  value={formData.capacitate}
+                  onChange={(e) => setFormData({ ...formData, capacitate: e.target.value })}
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
+              <div className="space-y-1.5">
+                <label htmlFor="descriere" className="text-xs font-semibold text-neutral-700">
+                  Detalii orientare & dotări principale
+                </label>
+                <Input
+                  id="descriere"
+                  placeholder="Indicații de acces și echipamente găzduite..."
+                  value={formData.descriere}
+                  onChange={(e) => setFormData({ ...formData, descriere: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => setIsModalOpen(false)}
                 >
                   Anulează
                 </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  {isSubmitting ? "Se salvează..." : "Salvează Sala"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isEditModalOpen && editingRoom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-neutral-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-base font-bold text-neutral-900">
-                Editează Sala <span className="font-mono text-indigo-600">{editingRoom.cod}</span>
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{modalError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleUpdateRoom} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Cod Sală</label>
-                  <Input
-                    type="text"
-                    value={formCod}
-                    onChange={(e) => setFormCod(e.target.value)}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Denumire Sală</label>
-                  <Input
-                    type="text"
-                    value={formNume}
-                    onChange={(e) => setFormNume(e.target.value)}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Tip Sală</label>
-                  <select
-                    value={formTip}
-                    onChange={(e) => setFormTip(e.target.value as TipSala)}
-                    className="w-full h-9 rounded-lg border border-neutral-200 px-2 bg-neutral-50 text-xs"
-                  >
-                    <option value="LABORATOR">Laborator</option>
-                    <option value="SALA_CERCETARE">Sală Cercetare</option>
-                    <option value="ATELIER">Atelier</option>
-                    <option value="SALA_SERVERE">Sală Servere</option>
-                    <option value="DEPOZIT">Depozit</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Etaj</label>
-                  <Input
-                    type="number"
-                    min="-3"
-                    max="30"
-                    value={formEtaj}
-                    onChange={(e) => setFormEtaj(Number(e.target.value))}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Capacitate</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="200"
-                    value={formCapacitate}
-                    onChange={(e) => setFormCapacitate(Number(e.target.value))}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Descriere</label>
-                <textarea
-                  value={formDescriere}
-                  onChange={(e) => setFormDescriere(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-lg border border-neutral-200 p-2 text-xs bg-neutral-50 focus:bg-white focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditModalOpen(false)}
-                >
-                  Anulează
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="bg-neutral-900 hover:bg-black text-white"
-                >
-                  {isSubmitting ? "Se actualizează..." : "Actualizează Sala"}
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Se salvează..." : "Salvează"}
                 </Button>
               </div>
             </form>
