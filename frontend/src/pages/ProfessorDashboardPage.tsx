@@ -78,6 +78,9 @@ export function ProfessorDashboardPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  const [demoApprovals, setDemoApprovals] = useState(DEMO_APPROVALS)
+  const [selectedDemoRequest, setSelectedDemoRequest] = useState<(typeof DEMO_APPROVALS)[number] | null>(null)
+
   useEffect(() => {
     loadDashboardData()
   }, [])
@@ -132,7 +135,25 @@ export function ProfessorDashboardPage() {
     }
   }
 
+  const handleApproveDemo = (id: number) => {
+    setDemoApprovals((prev) => prev.filter((item) => item.id !== id))
+    setSelectedDemoRequest(null)
+    setActionSuccess("Cererea studentului a fost aprobată.")
+  }
+
+  const handleRejectDemo = (id: number) => {
+    if (!rejectionReason.trim()) {
+      setActionError("Motivul respingerii este obligatoriu.")
+      return
+    }
+    setDemoApprovals((prev) => prev.filter((item) => item.id !== id))
+    setSelectedDemoRequest(null)
+    setRejectionReason("")
+    setActionSuccess("Cererea studentului a fost respinsă.")
+  }
+
   const displayCatalog = resources.length >= 3 ? resources.slice(0, 3) : DEMO_CATALOG_ITEMS
+  const pendingCount = pendingRequests.length > 0 ? pendingRequests.length : demoApprovals.length
 
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Panou didactic"]}>
@@ -214,7 +235,7 @@ export function ProfessorDashboardPage() {
               Cereri aprobare în așteptare
             </div>
             <div className="text-3xl font-bold text-neutral-900">
-              {pendingRequests.length || 3}
+              {pendingCount}
             </div>
             <div className="text-xs text-neutral-500 pt-0.5">necesită decizia profesorului</div>
           </div>
@@ -272,7 +293,7 @@ export function ProfessorDashboardPage() {
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h2 className="text-sm font-bold text-neutral-900">Aprobări studenți</h2>
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-black text-white">
-                {pendingRequests.length || 3} în așteptare
+                {pendingCount} în așteptare
               </span>
             </div>
 
@@ -289,7 +310,11 @@ export function ProfessorDashboardPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`/professor/approvals?id=${req.id}`)}
+                      onClick={() => {
+                        setActionError(null)
+                        setRejectionReason("")
+                        setSelectedRequest(req)
+                      }}
                       className="w-full h-8 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-200 font-medium rounded-lg mt-2"
                     >
                       Examinează cererea
@@ -297,7 +322,7 @@ export function ProfessorDashboardPage() {
                   </div>
                 ))
               ) : (
-                DEMO_APPROVALS.map((item) => (
+                demoApprovals.map((item) => (
                   <div key={item.id} className="p-4 rounded-xl border border-neutral-200 bg-white space-y-2 shadow-2xs">
                     <div className="text-xs font-bold text-neutral-900">{item.studentName}</div>
                     <div className="text-xs text-neutral-800 font-semibold">{item.resourceName}</div>
@@ -306,7 +331,11 @@ export function ProfessorDashboardPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`/professor/approvals?id=${item.id}`)}
+                      onClick={() => {
+                        setActionError(null)
+                        setRejectionReason("")
+                        setSelectedDemoRequest(item)
+                      }}
                       className="w-full h-8 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-200 font-medium rounded-lg mt-2"
                     >
                       Examinează cererea
@@ -395,6 +424,78 @@ export function ProfessorDashboardPage() {
                 <Button
                   onClick={() => handleApprove(selectedRequest.id)}
                   disabled={isActing}
+                  className="text-xs bg-black hover:bg-neutral-800 text-white"
+                >
+                  Aprobă cererea
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedDemoRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-neutral-200 overflow-hidden">
+            <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-neutral-900">Examinare cerere de rezervare</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Decizie de aprobare sau respingere didactică</p>
+              </div>
+              <button onClick={() => setSelectedDemoRequest(null)} className="text-neutral-400 hover:text-neutral-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                <div>
+                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Student</span>
+                  <span className="font-semibold text-neutral-900">{selectedDemoRequest.studentName}</span>
+                </div>
+                <div>
+                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Echipament</span>
+                  <span className="font-semibold text-neutral-900">{selectedDemoRequest.resourceName}</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-1">Scopul utilizării</span>
+                <p className="text-neutral-800 bg-neutral-50 p-3 rounded-xl border border-neutral-100 leading-relaxed">
+                  {selectedDemoRequest.scope}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-1">Interval solicitat</span>
+                <p className="text-neutral-800 font-mono bg-neutral-50 p-2.5 rounded-xl border border-neutral-100">
+                  {selectedDemoRequest.timeRange}
+                </p>
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-xs font-semibold text-neutral-700">
+                  Motiv respingere (opțional pentru aprobare, obligatoriu pentru respingere)
+                </label>
+                <textarea
+                  rows={2}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Introduceți motivul respingerii..."
+                  className="w-full text-xs p-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-neutral-100">
+                <Button
+                  variant="outline"
+                  onClick={() => handleRejectDemo(selectedDemoRequest.id)}
+                  className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+                >
+                  Respinge cererea
+                </Button>
+                <Button
+                  onClick={() => handleApproveDemo(selectedDemoRequest.id)}
                   className="text-xs bg-black hover:bg-neutral-800 text-white"
                 >
                   Aprobă cererea

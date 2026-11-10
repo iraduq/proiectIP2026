@@ -12,7 +12,6 @@ import { ReservationsPage } from "./pages/ReservationsPage"
 import { TechnicalHistoryPage } from "./pages/TechnicalHistoryPage"
 import { ProfessorDashboardPage } from "./pages/ProfessorDashboardPage"
 import { GroupBookingPage } from "./pages/GroupBookingPage"
-import { StudentApprovalsPage } from "./pages/StudentApprovalsPage"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -120,11 +119,7 @@ export function App() {
           />
           <Route
             path="/professor/approvals"
-            element={
-              <ProtectedRoute>
-                <StudentApprovalsPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/professor" replace />}
           />
           <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/" element={<WelcomePage />} />
