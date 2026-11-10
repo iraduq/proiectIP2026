@@ -100,7 +100,7 @@ const LAB_LOCATION_METADATA: Record<string, LabLocationMeta> = {
     shortCode: "Lab 105",
     building: "Corp Electro (Bd. Vasile Pârvan nr. 2)",
     wing: "Aripa C · Etaj 1 (Electronică)",
-    directions: "Intrarea Aripa C → Etajul 1, a treia sală pe partea stângă (Laborator Măsurări & Osciloscoape).",
+    directions: "Intrarea Aripa C → Etajul 1, a treia sală pe partea stângă (Laborator măsurări și osciloscoape).",
     schedule: "Luni – Vineri · 08:00 – 20:00",
     accessNote: "Sondele și kiturile RF se preiau de la tehnicianul sălii 105",
     coordinator: "Conf. dr. ing. Andrei Marin",
@@ -175,7 +175,7 @@ const DEFAULT_FALLBACK_ROOMS: Room[] = [
     facultate_nume: "Facultatea de Automatică și Calculatoare",
     institutie_id: 1,
     institutie_nume: "Universitatea Politehnica Timișoara",
-    nume: "DataCenter & Cluster HPC Cercetare (Sala Servere)",
+    nume: "Centru de date și cluster HPC de cercetare (Sala servere)",
     cod: "UPT-AC-CTI-S1",
     tip_sala: "SALA_CERCETARE",
     etaj: -1,
@@ -198,7 +198,7 @@ const DEFAULT_FALLBACK_ROOMS: Room[] = [
     facultate_nume: "Facultatea de Automatică și Calculatoare",
     institutie_id: 1,
     institutie_nume: "Universitatea Politehnica Timișoara",
-    nume: "Laborator Prototipare Rapidă, FabLab & Imprimare 3D",
+    nume: "Laborator de prototipare rapidă, FabLab și imprimare 3D",
     cod: "UPT-AC-IS-L1",
     tip_sala: "LABORATOR",
     etaj: 0,
@@ -552,27 +552,27 @@ export function RoomsPage() {
   const floorOptions = ["ALL", "Subsol", "Parter", "Etaj 1", "Etaj 2"]
   const wingOptions = [
     { id: "ALL", label: "Toate aripile din campus" },
-    { id: "Aripa A", label: "Aripa A (Automatică & FabLab)" },
-    { id: "Aripa B", label: "Aripa B (Calculatoare & AI)" },
-    { id: "Aripa C", label: "Aripa C (Electronică & Comunicații)" },
+    { id: "Aripa A", label: "Aripa A (Automatică și FabLab)" },
+    { id: "Aripa B", label: "Aripa B (Calculatoare și AI)" },
+    { id: "Aripa C", label: "Aripa C (Electronică și comunicații)" },
   ]
 
   return (
-    <AppLayout breadcrumbs={["Spațiu de lucru", "Laboratoare & Săli"]}>
+    <AppLayout breadcrumbs={["Spațiu de lucru", "Laboratoare și săli"]}>
       <div className="max-w-7xl mx-auto space-y-5">
         <Card className="rounded-2xl border-neutral-200 bg-white p-6 shadow-none">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Badge className="rounded-full bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5">
-                  LOCALIZARE CAMPUS
+                  Localizare campus
                 </Badge>
                 <span className="text-xs text-neutral-500 font-medium">
                   Corp Electro · Bd. Vasile Pârvan nr. 2
                 </span>
               </div>
               <h1 className="text-xl font-bold tracking-tight text-neutral-900">
-                Laboratoare & Săli de Cercetare
+                Laboratoare și săli de cercetare
               </h1>
               <p className="text-xs text-neutral-500 max-w-2xl">
                 Caută rapid unde se află un laborator în campus (aripă, etaj, indicații de orientare),
@@ -779,7 +779,7 @@ export function RoomsPage() {
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 font-bold text-neutral-900">
                           <Navigation className="h-3.5 w-3.5 text-neutral-800" />
-                          <span>Unde se află laboratorul & cum ajungi:</span>
+                          <span>Unde se află laboratorul și cum ajungi:</span>
                         </div>
                         <Badge
                           variant="outline"
@@ -902,7 +902,7 @@ export function RoomsPage() {
               <div className="flex items-center gap-2">
                 <Compass className="h-4 w-4 text-neutral-900" />
                 <h2 className="text-base font-bold text-neutral-900">
-                  {editingRoom ? "Editează Laborator / Sală" : "Adaugă Laborator / Sală"}
+                  {editingRoom ? "Editează laborator sau sală" : "Adaugă laborator sau sală"}
                 </h2>
               </div>
               <button
@@ -945,7 +945,7 @@ export function RoomsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label htmlFor="cod" className="text-xs font-semibold text-neutral-700">
-                    Cod Sală / Indicativ
+                    Cod sală / indicativ
                   </label>
                   <Input
                     id="cod"
@@ -957,7 +957,7 @@ export function RoomsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="etaj" className="text-xs font-semibold text-neutral-700">
-                    Etaj (-1 Subsol, 0 Parter, 1, 2)
+                    Etaj (-1 subsol, 0 parter, 1, 2)
                   </label>
                   <Input
                     id="etaj"
@@ -973,12 +973,12 @@ export function RoomsPage() {
 
               <div className="space-y-1.5">
                 <label htmlFor="nume" className="text-xs font-semibold text-neutral-700">
-                  Denumire Laborator
+                  Denumire laborator
                 </label>
                 <Input
                   id="nume"
                   required
-                  placeholder="Laborator Inteligență Artificială (Lab 204)"
+                  placeholder="Laborator inteligență artificială (Lab 204)"
                   value={formData.nume}
                   onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
                 />
@@ -1000,7 +1000,7 @@ export function RoomsPage() {
 
               <div className="space-y-1.5">
                 <label htmlFor="descriere" className="text-xs font-semibold text-neutral-700">
-                  Detalii orientare & dotări principale
+                  Detalii orientare și dotări principale
                 </label>
                 <Input
                   id="descriere"
