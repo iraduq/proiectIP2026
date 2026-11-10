@@ -615,13 +615,6 @@ export function DashboardPage() {
                   Rezervările mele
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={() => navigate("/guide")}
-                  className="w-full h-9 rounded-xl border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-800"
-                >
-                  Ghid laborator
-                </Button>
-                <Button
                   onClick={() => navigate("/resources")}
                   className="w-full h-9 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold"
                 >

@@ -10,7 +10,6 @@ import {
   DoorOpen,
   LogOut,
   Search,
-  HelpCircle,
   FlaskConical,
   GraduationCap,
   X,
@@ -119,7 +118,6 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
-        { label: "Ghid laborator", path: "/rooms", icon: HelpCircle },
       ]
 
   const totalResults =
@@ -325,14 +323,6 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         </div>
 
         <div className="p-4 border-t border-neutral-100 space-y-3">
-          <button
-            onClick={() => {}}
-            className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-900 px-2 py-1 w-full transition-colors"
-          >
-            <HelpCircle className="h-4 w-4 text-neutral-400" />
-            Ajutor și ghiduri
-          </button>
-
           <div className="flex items-center gap-3 p-2 rounded-lg bg-neutral-50 border border-neutral-100">
             <div className="h-8 w-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
               {user?.nume ? user.nume.charAt(0).toUpperCase() : <GraduationCap className="h-4 w-4" />}
