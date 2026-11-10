@@ -17,7 +17,6 @@ import {
   Cpu,
   Calendar,
   Wrench,
-  Users,
 } from "lucide-react"
 import { Input } from "../ui/input"
 
@@ -104,7 +103,6 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Catalog resurse", path: "/resources", icon: Cpu },
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
         { label: "Laboratoare și săli", path: "/rooms", icon: DoorOpen },
-        { label: "Aprobări studenți", path: "/professor/approvals", icon: Users },
       ]
     : isAdmin
     ? [
