@@ -244,7 +244,7 @@ export function ReservationsPage() {
                 <ul className="list-disc list-inside space-y-0.5 text-neutral-400">
                   <li>Maximum 4 echipamente simultan per student</li>
                   <li>Nu puteți rezerva două resurse din aceeași categorie în același timp</li>
-                  <li>Rezervările sunt supuse aprobării de către profesor sau responsabilul de laborator</li>
+                  <li>Rezervările sunt supuse aprobării de către reprezentantul de laborator</li>
                 </ul>
               </div>
             </div>
