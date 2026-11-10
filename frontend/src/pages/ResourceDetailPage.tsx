@@ -226,10 +226,44 @@ export function ResourceDetailPage() {
     return false
   }, [resourceBookings, startDateTime, endDateTime, bookingMode, selectedStartHour, durationHours])
 
+  const applyQuickHours = (hours: number) => {
+    setBookingMode("HOURLY")
+    setDurationHours(hours)
+    setErrorMsg(null)
+  }
+
+  const applyQuickDays = (daysCount: number) => {
+    setBookingMode("MULTIDAY")
+    setMultiDaysCount(daysCount)
+    setMultiEndHour(selectedStartHour)
+    setErrorMsg(null)
+  }
+
   const handleSelectSlot = (isoDate: string, hour: number) => {
     if (isSlotOccupied(isoDate, hour)) return
     setErrorMsg(null)
     setBookingSuccess(null)
+
+    const [y, m, d] = isoDate.split("-").map(Number)
+    const clickedDate = new Date(y, (m || 1) - 1, d || 1, hour, 0, 0, 0)
+
+    if (bookingMode === "MULTIDAY" && clickedDate > startDateTime) {
+      const startDayOnly = new Date(
+        startDateTime.getFullYear(),
+        startDateTime.getMonth(),
+        startDateTime.getDate()
+      )
+      const clickedDayOnly = new Date(y, (m || 1) - 1, d || 1)
+      const diffDays = Math.round(
+        (clickedDayOnly.getTime() - startDayOnly.getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (diffDays >= 1 && diffDays <= 14) {
+        setMultiDaysCount(diffDays)
+        setMultiEndHour(hour + 1)
+        return
+      }
+    }
+
     setSelectedIsoDate(isoDate)
     setSelectedStartHour(hour)
   }
@@ -620,6 +654,48 @@ export function ResourceDetailPage() {
                 <Badge className="rounded-full bg-neutral-950 hover:bg-neutral-950 text-white text-[10px] font-semibold px-2.5 py-0.5 border-transparent">
                   Selectat
                 </Badge>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-neutral-700">
+                  Alege rapid durata rezervării (ore sau zile):
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[1, 2, 4, 6, 8].map((h) => {
+                    const isSelected = bookingMode === "HOURLY" && durationHours === h
+                    return (
+                      <button
+                        key={`h-${h}`}
+                        type="button"
+                        onClick={() => applyQuickHours(h)}
+                        className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
+                          isSelected
+                            ? "bg-neutral-950 text-white"
+                            : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800"
+                        }`}
+                      >
+                        {h} {h === 1 ? "oră" : "ore"}
+                      </button>
+                    )
+                  })}
+                  {[1, 2, 3, 5, 7, 14].map((dCount) => {
+                    const isSelected = bookingMode === "MULTIDAY" && multiDaysCount === dCount
+                    return (
+                      <button
+                        key={`d-${dCount}`}
+                        type="button"
+                        onClick={() => applyQuickDays(dCount)}
+                        className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
+                          isSelected
+                            ? "bg-neutral-950 text-white"
+                            : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200"
+                        }`}
+                      >
+                        {dCount} {dCount === 1 ? "zi" : "zile"}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <form onSubmit={handleContinueBooking} className="space-y-4">

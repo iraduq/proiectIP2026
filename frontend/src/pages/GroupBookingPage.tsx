@@ -29,8 +29,10 @@ export function GroupBookingPage() {
   const [selectedResourceId, setSelectedResourceId] = useState<number>(0)
   const [selectedRoomId, setSelectedRoomId] = useState<number>(0)
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0])
-  const [startHour, setStartHour] = useState<number>(14)
+  const [startHour, setStartHour] = useState<number>(10)
+  const [durationMode, setDurationMode] = useState<"HOURS" | "DAYS">("HOURS")
   const [durationHours, setDurationHours] = useState<number>(4)
+  const [durationDays, setDurationDays] = useState<number>(3)
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -43,8 +45,8 @@ export function GroupBookingPage() {
   const loadData = async () => {
     try {
       const [resPage, roomsPage] = await Promise.all([
-        resourcesApi.getResources({ limit: 50 }),
-        academicApi.getRooms({ limit: 50 }),
+        resourcesApi.getResources({ limit: 200 }),
+        academicApi.getRooms({ limit: 100 }),
       ])
       setResources(resPage.items)
       setRooms(roomsPage.items)
@@ -55,9 +57,22 @@ export function GroupBookingPage() {
     }
   }
 
-  const endHour = startHour + durationHours
+  const endHour = durationMode === "HOURS" ? Math.min(22, startHour + durationHours) : startHour
   const formattedStart = `${String(startHour).padStart(2, "0")}:00`
   const formattedEnd = `${String(endHour).padStart(2, "0")}:00`
+
+  const endDateStr = (() => {
+    const d = new Date(`${selectedDate}T12:00:00`)
+    if (durationMode === "DAYS") {
+      d.setDate(d.getDate() + durationDays)
+    }
+    return d.toISOString().split("T")[0]
+  })()
+
+  const durationLabel =
+    durationMode === "HOURS"
+      ? `${durationHours} ${durationHours === 1 ? "oră" : "ore"}`
+      : `${durationDays} ${durationDays === 1 ? "zi" : "zile"}`
 
   const handleCreateGroupBooking = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,17 +82,18 @@ export function GroupBookingPage() {
     setErrorMsg(null)
 
     try {
-      const startDateTime = new Date(`${selectedDate}T${formattedStart}:00Z`)
-      const endDateTime = new Date(`${selectedDate}T${formattedEnd}:00Z`)
+      const startDateTime = new Date(`${selectedDate}T${formattedStart}:00`)
+      const endDateTime = new Date(`${endDateStr}T${formattedEnd}:00`)
 
       await reservationsApi.createReservation({
         resursa_id: selectedResourceId,
         data_inceput: startDateTime.toISOString(),
         data_sfarsit: endDateTime.toISOString(),
-        scop: `Rezervare didactică / activitate de laborator pentru grupă (${durationHours} ore).`,
+        scop: `Rezervare didactică / cercetare (${durationLabel}).`,
       })
 
-      setSuccessMsg("Rezervarea didactică pentru grupă a fost confirmată și înregistrată.")
+      setSuccessMsg("Rezervarea a fost confirmată și înregistrată.")
+      setTimeout(() => navigate("/reservations"), 800)
     } catch (err: any) {
       setErrorMsg(err.response?.data?.detail || "Eroare la realizarea rezervării.")
     } finally {
@@ -176,29 +192,113 @@ export function GroupBookingPage() {
               </div>
 
               <div className="border-t border-neutral-100 pt-5 space-y-4">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Intervalul activității</h3>
-                  <p className="text-xs text-neutral-600 font-medium mt-0.5">
-                    {selectedDate} · {formattedStart} - {formattedEnd}
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Intervalul activității</h3>
+                    <p className="text-xs text-neutral-600 font-medium mt-0.5">
+                      {durationMode === "HOURS"
+                        ? `${selectedDate} · ${formattedStart} – ${formattedEnd}`
+                        : `${selectedDate} (${formattedStart}) – ${endDateStr} (${formattedEnd})`}
+                    </p>
+                  </div>
+
+                  <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-100 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setDurationMode("HOURS")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                        durationMode === "HOURS"
+                          ? "bg-white text-neutral-950 shadow-sm"
+                          : "text-neutral-600 hover:text-neutral-900"
+                      }`}
+                    >
+                      Pe ore
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDurationMode("DAYS")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                        durationMode === "DAYS"
+                          ? "bg-white text-neutral-950 shadow-sm"
+                          : "text-neutral-600 hover:text-neutral-900"
+                      }`}
+                    >
+                      Pe zile (1–14 zile)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {[1, 2, 4, 6, 8].map((h) => (
+                    <button
+                      key={`gh-${h}`}
+                      type="button"
+                      onClick={() => {
+                        setDurationMode("HOURS")
+                        setDurationHours(h)
+                      }}
+                      className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
+                        durationMode === "HOURS" && durationHours === h
+                          ? "bg-black text-white"
+                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800"
+                      }`}
+                    >
+                      {h} {h === 1 ? "oră" : "ore"}
+                    </button>
+                  ))}
+                  {[1, 2, 3, 5, 7, 14].map((d) => (
+                    <button
+                      key={`gd-${d}`}
+                      type="button"
+                      onClick={() => {
+                        setDurationMode("DAYS")
+                        setDurationDays(d)
+                      }}
+                      className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
+                        durationMode === "DAYS" && durationDays === d
+                          ? "bg-black text-white"
+                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200"
+                      }`}
+                    >
+                      {d} {d === 1 ? "zi" : "zile"}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
                     <span className="text-neutral-400 block text-[10px] uppercase font-bold">Început</span>
-                    <span className="font-bold text-neutral-900 text-sm">{formattedStart}</span>
+                    <span className="font-bold text-neutral-900 text-sm">
+                      {selectedDate} · {formattedStart}
+                    </span>
                   </div>
                   <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
                     <span className="text-neutral-400 block text-[10px] uppercase font-bold">Sfârșit</span>
-                    <span className="font-bold text-neutral-900 text-sm">{formattedEnd}</span>
+                    <span className="font-bold text-neutral-900 text-sm">
+                      {endDateStr} · {formattedEnd}
+                    </span>
                   </div>
                   <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
                     <span className="text-neutral-400 block text-[10px] uppercase font-bold">Durată</span>
-                    <span className="font-bold text-neutral-900 text-sm">{durationHours} ore</span>
+                    <span className="font-bold text-neutral-900 text-sm">{durationLabel}</span>
                   </div>
                 </div>
 
                 <div className="space-y-4 pt-2">
+                  <div>
+                    <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
+                      <span>Data de început</span>
+                    </div>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => {
+                        if (e.target.value) setSelectedDate(e.target.value)
+                      }}
+                      className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-900"
+                    />
+                  </div>
+
                   <div>
                     <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
                       <span>Ora de început: {formattedStart}</span>
@@ -219,28 +319,48 @@ export function GroupBookingPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                      <span>Durata laboratorului: {durationHours} ore</span>
+                  {durationMode === "HOURS" ? (
+                    <div>
+                      <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
+                        <span>Durata în ore: {durationHours} ore</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="8"
+                        step="1"
+                        value={durationHours}
+                        onChange={(e) => setDurationHours(parseInt(e.target.value))}
+                        className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
+                      />
+                      <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
+                        <span>1 oră</span>
+                        <span>4 ore</span>
+                        <span>8 ore</span>
+                      </div>
                     </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="5"
-                      step="1"
-                      value={durationHours}
-                      onChange={(e) => setDurationHours(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                    />
-                    <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
-                      <span>1 oră</span>
-                      <span>3 ore</span>
-                      <span>5 ore</span>
+                  ) : (
+                    <div>
+                      <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
+                        <span>Durata în zile: {durationDays} {durationDays === 1 ? "zi" : "zile"}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="14"
+                        step="1"
+                        value={durationDays}
+                        onChange={(e) => setDurationDays(parseInt(e.target.value))}
+                        className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
+                      />
+                      <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
+                        <span>1 zi</span>
+                        <span>3 zile</span>
+                        <span>7 zile</span>
+                        <span>14 zile</span>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-[11px] text-neutral-400 leading-snug">
-                    Pași de 1 oră. Durata și ora de sfârșit se recalculează împreună, în limita slotului didactic selectat.
-                  </p>
+                  )}
                 </div>
               </div>
             </div>
