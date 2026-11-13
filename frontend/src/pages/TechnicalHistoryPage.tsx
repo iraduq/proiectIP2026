@@ -1,30 +1,14 @@
-import React, { useState, useEffect } from "react"
 import { CheckCircle2, Plus, Search, ShieldAlert, Wrench } from "lucide-react"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
-import { technicalHistoryApi } from "../api/technicalHistory"
-import { resourcesApi } from "../api/resources"
+import { useTechnicalHistory } from "../hooks/useTechnicalHistory"
 import { Button } from "../components/ui/button"
 import { TechnicalHistoryTable } from "../components/technical/TechnicalHistoryTable"
 import { TechnicalLogModal } from "../components/technical/TechnicalLogModal"
 import { INTERVENTION_FILTER_OPTIONS } from "../data/technicalHistoryConstants"
-import type { Resource, StareTehnica, TechnicalHistory } from "../types"
 
 export function TechnicalHistoryPage() {
   const { user } = useAuth()
-
-  const [history, setHistory] = useState<TechnicalHistory[]>([])
-  const [resources, setResources] = useState<Resource[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [typeFilter, setTypeFilter] = useState<string>("ALL")
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedResourceId, setSelectedResourceId] = useState<number>(0)
-  const [logType, setLogType] = useState("MENTENANTA_PREVENTIVA")
-  const [logDesc, setLogDesc] = useState("")
-  const [logState, setLogState] = useState<StareTehnica>("IN_MENTENANTA")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   const canAccess =
     user?.rol === "ADMINISTRATOR" ||
@@ -36,61 +20,7 @@ export function TechnicalHistoryPage() {
     user?.rol === "RESPONSABIL_LABORATOR" ||
     Boolean(user?.permissions?.includes("technical_history:create"))
 
-  const loadData = async () => {
-    setIsLoading(true)
-    try {
-      const [hRes, rRes] = await Promise.all([
-        technicalHistoryApi.getTechnicalHistory({ limit: 100 }),
-        resourcesApi.getResources({ limit: 100 }),
-      ])
-      setHistory(hRes.items)
-      setResources(rRes.items)
-      if (rRes.items.length > 0) setSelectedResourceId(rRes.items[0].id)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (canAccess) loadData()
-    else setIsLoading(false)
-  }, [canAccess])
-
-  const handleCreateLog = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedResourceId || !canCreate) return
-    setIsSubmitting(true)
-    try {
-      await technicalHistoryApi.createTechnicalHistory({
-        resursa_id: selectedResourceId,
-        tip_interventie: logType,
-        descriere: logDesc,
-        stare_noua: logState,
-      })
-      setSuccessMsg("Înregistrarea a fost adăugată cu succes în jurnalul tehnic.")
-      setIsModalOpen(false)
-      setLogDesc("")
-      loadData()
-    } catch (err: any) {
-      alert(err.response?.data?.detail || "Eroare la adăugarea înregistrării.")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const filteredHistory = history.filter((h) => {
-    if (typeFilter !== "ALL" && h.tip_interventie !== typeFilter) return false
-    if (!search.trim()) return true
-    const q = search.toLowerCase()
-    return (
-      h.resursa_nume?.toLowerCase().includes(q) ||
-      h.resursa_cod?.toLowerCase().includes(q) ||
-      h.descriere?.toLowerCase().includes(q) ||
-      h.utilizator_nume?.toLowerCase().includes(q)
-    )
-  })
+  const tech = useTechnicalHistory(canAccess, canCreate)
 
   if (!canAccess) {
     return (
@@ -133,7 +63,7 @@ export function TechnicalHistoryPage() {
           </div>
           {canCreate && (
             <Button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => tech.setIsModalOpen(true)}
               className="bg-black hover:bg-neutral-800 text-white gap-2 shadow-sm"
             >
               <Plus className="h-4 w-4" />
@@ -142,14 +72,14 @@ export function TechnicalHistoryPage() {
           )}
         </div>
 
-        {successMsg && (
+        {tech.successMsg && (
           <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-              <span>{successMsg}</span>
+              <span>{tech.successMsg}</span>
             </div>
             <button
-              onClick={() => setSuccessMsg(null)}
+              onClick={() => tech.setSuccessMsg(null)}
               className="text-emerald-600 hover:text-emerald-800 font-bold"
             >
               ✕
@@ -163,8 +93,8 @@ export function TechnicalHistoryPage() {
             <input
               type="text"
               placeholder="Caută în jurnal după echipament, autor sau descriere..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={tech.search}
+              onChange={(e) => tech.setSearch(e.target.value)}
               className="w-full pl-9 pr-3 h-9 text-xs rounded-lg border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
             />
           </div>
@@ -172,8 +102,8 @@ export function TechnicalHistoryPage() {
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-neutral-500">Tip intervenție:</span>
             <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              value={tech.typeFilter}
+              onChange={(e) => tech.setTypeFilter(e.target.value)}
               className="h-9 px-3 rounded-lg border border-neutral-200 bg-white text-xs text-neutral-800 focus:outline-none focus:ring-1 focus:ring-black"
             >
               {INTERVENTION_FILTER_OPTIONS.map((opt) => (
@@ -185,22 +115,22 @@ export function TechnicalHistoryPage() {
           </div>
         </div>
 
-        <TechnicalHistoryTable items={filteredHistory} isLoading={isLoading} />
+        <TechnicalHistoryTable items={tech.filteredHistory} isLoading={tech.isLoading} />
 
-        {isModalOpen && (
+        {tech.isModalOpen && (
           <TechnicalLogModal
-            resources={resources}
-            selectedResourceId={selectedResourceId}
-            logType={logType}
-            logState={logState}
-            logDesc={logDesc}
-            isSubmitting={isSubmitting}
-            onResourceChange={setSelectedResourceId}
-            onTypeChange={setLogType}
-            onStateChange={setLogState}
-            onDescChange={setLogDesc}
-            onClose={() => setIsModalOpen(false)}
-            onSubmit={handleCreateLog}
+            resources={tech.resources}
+            selectedResourceId={tech.selectedResourceId}
+            logType={tech.logType}
+            logState={tech.logState}
+            logDesc={tech.logDesc}
+            isSubmitting={tech.isSubmitting}
+            onResourceChange={tech.setSelectedResourceId}
+            onTypeChange={tech.setLogType}
+            onStateChange={tech.setLogState}
+            onDescChange={tech.setLogDesc}
+            onClose={() => tech.setIsModalOpen(false)}
+            onSubmit={tech.handleCreateLog}
           />
         )}
       </div>
