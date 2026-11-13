@@ -1,28 +1,18 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react"
 import { AppLayout } from "../components/layout/AppLayout"
-import { useAuth } from "../context/AuthContext"
+import { Button } from "../components/ui/button"
+import { Badge } from "../components/ui/badge"
+import { GroupBookingFormCard } from "../components/professor/GroupBookingFormCard"
+import { GroupBookingSummaryCard } from "../components/professor/GroupBookingSummaryCard"
 import { resourcesApi } from "../api/resources"
 import { academicApi } from "../api/academic"
 import { reservationsApi } from "../api/reservations"
 import type { Resource, Room } from "../types"
-import {
-  Calendar as CalendarIcon,
-  Clock,
-  DoorOpen,
-  ArrowLeft,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-  Cpu,
-  Layers,
-} from "lucide-react"
-import { Button } from "../components/ui/button"
-import { Badge } from "../components/ui/badge"
 
 export function GroupBookingPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [resources, setResources] = useState<Resource[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
@@ -39,23 +29,22 @@ export function GroupBookingPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [resPage, roomsPage] = await Promise.all([
+          resourcesApi.getResources({ limit: 200 }),
+          academicApi.getRooms({ limit: 100 }),
+        ])
+        setResources(resPage.items)
+        setRooms(roomsPage.items)
+        if (resPage.items.length > 0) setSelectedResourceId(resPage.items[0].id)
+        if (roomsPage.items.length > 0) setSelectedRoomId(roomsPage.items[0].id)
+      } catch (e) {
+        console.error(e)
+      }
+    }
     loadData()
   }, [])
-
-  const loadData = async () => {
-    try {
-      const [resPage, roomsPage] = await Promise.all([
-        resourcesApi.getResources({ limit: 200 }),
-        academicApi.getRooms({ limit: 100 }),
-      ])
-      setResources(resPage.items)
-      setRooms(roomsPage.items)
-      if (resPage.items.length > 0) setSelectedResourceId(resPage.items[0].id)
-      if (roomsPage.items.length > 0) setSelectedRoomId(roomsPage.items[0].id)
-    } catch (e) {
-      console.error(e)
-    }
-  }
 
   const endHour = durationMode === "HOURS" ? Math.min(22, startHour + durationHours) : startHour
   const formattedStart = `${String(startHour).padStart(2, "0")}:00`
@@ -63,9 +52,7 @@ export function GroupBookingPage() {
 
   const endDateStr = (() => {
     const d = new Date(`${selectedDate}T12:00:00`)
-    if (durationMode === "DAYS") {
-      d.setDate(d.getDate() + durationDays)
-    }
+    if (durationMode === "DAYS") d.setDate(d.getDate() + durationDays)
     return d.toISOString().split("T")[0]
   })()
 
@@ -80,18 +67,15 @@ export function GroupBookingPage() {
 
     setIsSubmitting(true)
     setErrorMsg(null)
-
     try {
       const startDateTime = new Date(`${selectedDate}T${formattedStart}:00`)
       const endDateTime = new Date(`${endDateStr}T${formattedEnd}:00`)
-
       await reservationsApi.createReservation({
         resursa_id: selectedResourceId,
         data_inceput: startDateTime.toISOString(),
         data_sfarsit: endDateTime.toISOString(),
         scop: `Rezervare didactică / cercetare (${durationLabel}).`,
       })
-
       setSuccessMsg("Rezervarea a fost confirmată și înregistrată.")
       setTimeout(() => navigate("/reservations"), 800)
     } catch (err: any) {
@@ -119,7 +103,6 @@ export function GroupBookingPage() {
               Alocă resurse unei discipline și confirmă impactul asupra rezervărilor individuale.
             </p>
           </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -137,7 +120,9 @@ export function GroupBookingPage() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
               <span className="font-medium">{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-600">✕</button>
+            <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-600">
+              ✕
+            </button>
           </div>
         )}
 
@@ -147,330 +132,50 @@ export function GroupBookingPage() {
               <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
               <span className="font-medium">{errorMsg}</span>
             </div>
-            <button onClick={() => setErrorMsg(null)} className="font-bold text-rose-600">✕</button>
+            <button onClick={() => setErrorMsg(null)} className="font-bold text-rose-600">
+              ✕
+            </button>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-xs space-y-6">
-              <div className="border-b border-neutral-100 pb-4">
-                <h2 className="text-sm font-bold text-neutral-900">Disciplină și resurse</h2>
-                <p className="text-xs text-neutral-500">Rezervare didactică / grupă</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Tip resursă / Echipament</label>
-                  <select
-                    value={selectedResourceId}
-                    onChange={(e) => setSelectedResourceId(Number(e.target.value))}
-                    className="w-full h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs focus:outline-none focus:ring-1 focus:ring-black"
-                  >
-                    {resources.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.nume} ({r.cod_inventar})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Sală</label>
-                  <select
-                    value={selectedRoomId}
-                    onChange={(e) => setSelectedRoomId(Number(e.target.value))}
-                    className="w-full h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs focus:outline-none focus:ring-1 focus:ring-black"
-                  >
-                    {rooms.map((rm) => (
-                      <option key={rm.id} value={rm.id}>
-                        {rm.cod} - {rm.nume}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="border-t border-neutral-100 pt-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Intervalul activității</h3>
-                    <p className="text-xs text-neutral-600 font-medium mt-0.5">
-                      {durationMode === "HOURS"
-                        ? `${selectedDate} · ${formattedStart} – ${formattedEnd}`
-                        : `${selectedDate} (${formattedStart}) – ${endDateStr} (${formattedEnd})`}
-                    </p>
-                  </div>
-
-                  <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-100 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setDurationMode("HOURS")}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                        durationMode === "HOURS"
-                          ? "bg-white text-neutral-950 shadow-sm"
-                          : "text-neutral-600 hover:text-neutral-900"
-                      }`}
-                    >
-                      Pe ore
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDurationMode("DAYS")}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                        durationMode === "DAYS"
-                          ? "bg-white text-neutral-950 shadow-sm"
-                          : "text-neutral-600 hover:text-neutral-900"
-                      }`}
-                    >
-                      Pe zile (1–14 zile)
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {[1, 2, 4, 6, 8].map((h) => (
-                    <button
-                      key={`gh-${h}`}
-                      type="button"
-                      onClick={() => {
-                        setDurationMode("HOURS")
-                        setDurationHours(h)
-                      }}
-                      className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
-                        durationMode === "HOURS" && durationHours === h
-                          ? "bg-black text-white"
-                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800"
-                      }`}
-                    >
-                      {h} {h === 1 ? "oră" : "ore"}
-                    </button>
-                  ))}
-                  {[1, 2, 3, 5, 7, 14].map((d) => (
-                    <button
-                      key={`gd-${d}`}
-                      type="button"
-                      onClick={() => {
-                        setDurationMode("DAYS")
-                        setDurationDays(d)
-                      }}
-                      className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
-                        durationMode === "DAYS" && durationDays === d
-                          ? "bg-black text-white"
-                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200"
-                      }`}
-                    >
-                      {d} {d === 1 ? "zi" : "zile"}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                    <span className="text-neutral-400 block text-[10px] uppercase font-bold">Început</span>
-                    <span className="font-bold text-neutral-900 text-sm">
-                      {selectedDate} · {formattedStart}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                    <span className="text-neutral-400 block text-[10px] uppercase font-bold">Sfârșit</span>
-                    <span className="font-bold text-neutral-900 text-sm">
-                      {endDateStr} · {formattedEnd}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                    <span className="text-neutral-400 block text-[10px] uppercase font-bold">Durată</span>
-                    <span className="font-bold text-neutral-900 text-sm">{durationLabel}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                      <span>Data de început</span>
-                    </div>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => {
-                        if (e.target.value) setSelectedDate(e.target.value)
-                      }}
-                      className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-900"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                      <span>Ora de început: {formattedStart}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="8"
-                      max="17"
-                      step="1"
-                      value={startHour}
-                      onChange={(e) => setStartHour(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                    />
-                    <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
-                      <span>08:00</span>
-                      <span>12:00</span>
-                      <span>17:00</span>
-                    </div>
-                  </div>
-
-                  {durationMode === "HOURS" ? (
-                    <div>
-                      <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                        <span>Durata în ore: {durationHours} ore</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="8"
-                        step="1"
-                        value={durationHours}
-                        onChange={(e) => setDurationHours(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                      />
-                      <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
-                        <span>1 oră</span>
-                        <span>4 ore</span>
-                        <span>8 ore</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex justify-between items-center text-xs font-semibold text-neutral-700 mb-1.5">
-                        <span>Durata în zile: {durationDays} {durationDays === 1 ? "zi" : "zile"}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="14"
-                        step="1"
-                        value={durationDays}
-                        onChange={(e) => setDurationDays(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                      />
-                      <div className="flex justify-between text-[10px] text-neutral-400 pt-1 font-mono">
-                        <span>1 zi</span>
-                        <span>3 zile</span>
-                        <span>7 zile</span>
-                        <span>14 zile</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <GroupBookingFormCard
+              resources={resources}
+              rooms={rooms}
+              selectedResourceId={selectedResourceId}
+              selectedRoomId={selectedRoomId}
+              selectedDate={selectedDate}
+              endDateStr={endDateStr}
+              startHour={startHour}
+              durationMode={durationMode}
+              durationHours={durationHours}
+              durationDays={durationDays}
+              formattedStart={formattedStart}
+              formattedEnd={formattedEnd}
+              durationLabel={durationLabel}
+              onResourceChange={setSelectedResourceId}
+              onRoomChange={setSelectedRoomId}
+              onDateChange={setSelectedDate}
+              onStartHourChange={setStartHour}
+              onDurationModeChange={setDurationMode}
+              onDurationHoursChange={setDurationHours}
+              onDurationDaysChange={setDurationDays}
+            />
           </div>
 
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-xs space-y-5">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Data activității</h3>
-                    <div className="text-xs font-bold text-neutral-900 mt-0.5">Luni, 26 octombrie 2026</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-                    <span className="font-semibold text-neutral-800">Octombrie 2026</span>
-                    <button type="button" className="p-1 hover:bg-neutral-100 rounded">‹</button>
-                    <button type="button" className="p-1 hover:bg-neutral-100 rounded">›</button>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-neutral-50/70 border border-neutral-200/80">
-                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-neutral-400 pb-2">
-                    <span>Lu</span><span>Ma</span><span>Mi</span><span>Jo</span><span>Vi</span><span>Sâ</span><span>Du</span>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
-                    <span className="text-neutral-300 py-1">28</span>
-                    <span className="text-neutral-300 py-1">29</span>
-                    <span className="text-neutral-300 py-1">30</span>
-                    <span className="py-1 text-neutral-600">1</span>
-                    <span className="py-1 text-neutral-600">2</span>
-                    <span className="py-1 text-neutral-600">3</span>
-                    <span className="py-1 text-neutral-600">4</span>
-                    <span className="py-1 text-neutral-600">5</span>
-                    <span className="py-1 text-neutral-600">6</span>
-                    <span className="py-1 text-neutral-600">7</span>
-                    <span className="py-1 text-neutral-600">8</span>
-                    <span className="py-1 text-neutral-600">9</span>
-                    <span className="py-1 text-neutral-600">10</span>
-                    <span className="py-1 text-neutral-600">11</span>
-                    <span className="py-1 text-neutral-600">12</span>
-                    <span className="py-1 text-neutral-600">13</span>
-                    <span className="py-1 text-neutral-600">14</span>
-                    <span className="py-1 text-neutral-600">15</span>
-                    <span className="py-1 text-neutral-600">16</span>
-                    <span className="py-1 text-neutral-600">17</span>
-                    <span className="py-1 text-neutral-600">18</span>
-                    <span className="py-1 text-neutral-600">19</span>
-                    <span className="py-1 text-neutral-600">20</span>
-                    <span className="py-1 text-neutral-600">21</span>
-                    <span className="py-1 text-neutral-600">22</span>
-                    <span className="py-1 text-neutral-600">23</span>
-                    <span className="py-1 text-neutral-600">24</span>
-                    <span className="py-1 text-neutral-600">25</span>
-                    <span className="py-1 bg-black text-white font-bold rounded-full">26</span>
-                    <span className="py-1 text-neutral-600">27</span>
-                    <span className="py-1 text-neutral-600">28</span>
-                    <span className="py-1 text-neutral-600">29</span>
-                    <span className="py-1 text-neutral-600">30</span>
-                    <span className="py-1 text-neutral-600">31</span>
-                    <span className="text-neutral-300 py-1">1</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-neutral-100 pt-4 space-y-2.5">
-                <h4 className="text-xs font-bold text-neutral-900">
-                  Disponibilitate · {selectedRoom?.cod || "Lab 210"}
-                </h4>
-                <div className="space-y-2">
-                  <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200 text-xs space-y-0.5">
-                    <div className="font-semibold text-neutral-700">08:00–12:00 · Mentenanță</div>
-                    <div className="text-[11px] text-neutral-500">Indisponibil · nu poate fi suprascris</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-neutral-50/80 border border-neutral-300 text-xs space-y-0.5">
-                    <div className="font-semibold text-neutral-900">{formattedStart}–{formattedEnd} · Interval selectat</div>
-                    <div className="text-[11px] text-neutral-500">
-                      12× {selectedRes?.nume || "Kituri STM32"} · {durationHours} ore · {selectedRoom?.cod || "Lab 210"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-neutral-100 pt-4 space-y-3">
-                <h4 className="text-xs font-bold text-neutral-900">Sumarul rezervării</h4>
-                <div className="p-3.5 rounded-xl bg-neutral-900 text-white text-xs space-y-1">
-                  <div className="font-semibold">26.10.2026 · Luni {formattedStart} - {formattedEnd}</div>
-                  <div className="text-neutral-400 text-[11px]">Durată: {durationHours} ore · {selectedRes?.nume}</div>
-                </div>
-
-                <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isConfirmed}
-                    onChange={(e) => setIsConfirmed(e.target.checked)}
-                    className="mt-0.5 rounded border-neutral-300 text-black focus:ring-black"
-                  />
-                  <span className="text-[11px] text-neutral-600 leading-snug">
-                    Bifează confirmarea de mai sus pentru a continua. Nicio rezervare nu a fost modificată încă.
-                  </span>
-                </label>
-
-                <Button
-                  onClick={handleCreateGroupBooking}
-                  disabled={!isConfirmed || isSubmitting}
-                  className="w-full bg-black hover:bg-neutral-800 text-white text-xs h-10 shadow-sm font-semibold"
-                >
-                  {isSubmitting ? "Se confirmă..." : "Confirmă și rezervă"}
-                </Button>
-              </div>
-            </div>
+            <GroupBookingSummaryCard
+              selectedRoom={selectedRoom}
+              selectedRes={selectedRes}
+              formattedStart={formattedStart}
+              formattedEnd={formattedEnd}
+              durationHours={durationHours}
+              isConfirmed={isConfirmed}
+              isSubmitting={isSubmitting}
+              onConfirmChange={setIsConfirmed}
+              onSubmit={handleCreateGroupBooking}
+            />
           </div>
         </div>
       </div>
