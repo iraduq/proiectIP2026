@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
+import { Plus, CheckCircle2, AlertCircle, Wrench } from "lucide-react"
 import { AppLayout } from "../components/layout/AppLayout"
 import { useAuth } from "../context/AuthContext"
 import { resourcesApi } from "../api/resources"
 import { reservationsApi } from "../api/reservations"
 import type { Resource, Reservation } from "../types"
-import {
-  Plus,
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Wrench,
-  Calendar,
-} from "lucide-react"
 import { Button } from "../components/ui/button"
+import {
+  ProfessorApprovalModal,
+  type DemoApprovalItem,
+} from "../components/professor/ProfessorApprovalModal"
+import {
+  ProfessorRequestsPanel,
+  DEMO_PROFESSOR_ACTIVITIES,
+} from "../components/professor/ProfessorRequestsPanel"
 
 const DEMO_CATALOG_ITEMS = [
   {
@@ -22,7 +23,8 @@ const DEMO_CATALOG_ITEMS = [
     cod_inventar: "INV-USV-2026-088",
     sala_cod: "Lab 208",
     specs: "6 axe, ROS2",
-    imagine_url: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=800&q=80",
+    imagine_url:
+      "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=800&q=80",
   },
   {
     id: 2,
@@ -30,7 +32,8 @@ const DEMO_CATALOG_ITEMS = [
     cod_inventar: "INV-USV-2026-102",
     sala_cod: "Lab 210",
     specs: "40 TOPS",
-    imagine_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80",
+    imagine_url:
+      "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80",
   },
   {
     id: 3,
@@ -38,11 +41,12 @@ const DEMO_CATALOG_ITEMS = [
     cod_inventar: "INV-USV-2026-215",
     sala_cod: "Lab 105",
     specs: "300 MHz",
-    imagine_url: "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
+    imagine_url:
+      "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
   },
 ]
 
-const DEMO_APPROVALS = [
+const DEMO_APPROVALS: DemoApprovalItem[] = [
   {
     id: 101,
     studentName: "Radu Ivan",
@@ -63,23 +67,6 @@ const DEMO_APPROVALS = [
     resourceName: "Rohde & Schwarz RTB2004",
     scope: "Măsurători de laborator · AIA",
     timeRange: "28.10.2026 · 10:00–12:00",
-  },
-]
-
-const DEMO_PROFESSOR_ACTIVITIES = [
-  {
-    id: 201,
-    course: "Inteligență artificială și învățare profundă · Grupa 341C1",
-    resourceName: "Workstation AI Deep Learning RTX 4090 (Lab 204)",
-    timeRange: "Miercuri · 10:00–12:00",
-    room: "Lab 204",
-  },
-  {
-    id: 202,
-    course: "Sisteme încorporate și timp real · Grupa 332AC",
-    resourceName: "Kit NVIDIA Jetson Orin Nano + FPGA Zynq (Lab 210)",
-    timeRange: "Joi · 14:00–16:00",
-    room: "Lab 210",
   },
 ]
 
@@ -107,20 +94,19 @@ export function ProfessorDashboardPage() {
   const [isActing, setIsActing] = useState(false)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [demoApprovals, setDemoApprovals] = useState(DEMO_APPROVALS)
-  const [selectedDemoRequest, setSelectedDemoRequest] = useState<(typeof DEMO_APPROVALS)[number] | null>(null)
+  const [demoApprovals, setDemoApprovals] = useState<DemoApprovalItem[]>(DEMO_APPROVALS)
+  const [selectedDemoRequest, setSelectedDemoRequest] = useState<DemoApprovalItem | null>(null)
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [canApproveRequests, user?.id_utilizator])
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const resData = await resourcesApi.getResources({ limit: 16 })
       setResources(resData.items)
 
       if (canApproveRequests) {
-        const reqData = await reservationsApi.getReservations({ stare: "IN_ASTEPTARE", limit: 10 })
+        const reqData = await reservationsApi.getReservations({
+          stare: "IN_ASTEPTARE",
+          limit: 10,
+        })
         setPendingRequests(reqData.items)
       } else {
         const ownData = await reservationsApi.getReservations({
@@ -131,7 +117,11 @@ export function ProfessorDashboardPage() {
       }
     } catch {
     }
-  }
+  }, [canApproveRequests, user?.id_utilizator])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
 
   const handleApprove = async (id: number) => {
     setIsActing(true)
@@ -141,8 +131,9 @@ export function ProfessorDashboardPage() {
       setActionSuccess("Rezervarea a fost aprobată de reprezentantul de laborator.")
       setSelectedRequest(null)
       loadDashboardData()
-    } catch (err: any) {
-      setActionError(err.response?.data?.detail || "Eroare la aprobare.")
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } } }
+      setActionError(errorObj.response?.data?.detail || "Eroare la aprobare.")
     } finally {
       setIsActing(false)
     }
@@ -161,8 +152,9 @@ export function ProfessorDashboardPage() {
       setSelectedRequest(null)
       setRejectionReason("")
       loadDashboardData()
-    } catch (err: any) {
-      setActionError(err.response?.data?.detail || "Eroare la respingere.")
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } } }
+      setActionError(errorObj.response?.data?.detail || "Eroare la respingere.")
     } finally {
       setIsActing(false)
     }
@@ -186,8 +178,10 @@ export function ProfessorDashboardPage() {
   }
 
   const displayCatalog = resources.length >= 3 ? resources.slice(0, 3) : DEMO_CATALOG_ITEMS
-  const pendingCount = pendingRequests.length > 0 ? pendingRequests.length : demoApprovals.length
-  const profActivitiesCount = myReservations.length > 0 ? myReservations.length : DEMO_PROFESSOR_ACTIVITIES.length
+  const pendingCount =
+    pendingRequests.length > 0 ? pendingRequests.length : demoApprovals.length
+  const profActivitiesCount =
+    myReservations.length > 0 ? myReservations.length : DEMO_PROFESSOR_ACTIVITIES.length
 
   return (
     <AppLayout
@@ -260,7 +254,13 @@ export function ProfessorDashboardPage() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
               <span className="font-medium">{actionSuccess}</span>
             </div>
-            <button onClick={() => setActionSuccess(null)} className="font-bold text-emerald-700">✕</button>
+            <button
+              type="button"
+              onClick={() => setActionSuccess(null)}
+              className="font-bold text-emerald-700"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -270,7 +270,13 @@ export function ProfessorDashboardPage() {
               <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
               <span className="font-medium">{actionError}</span>
             </div>
-            <button onClick={() => setActionError(null)} className="font-bold text-rose-700">✕</button>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="font-bold text-rose-700"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -287,12 +293,8 @@ export function ProfessorDashboardPage() {
 
           {canApproveRequests ? (
             <div className="p-6 bg-white rounded-2xl border border-neutral-200 shadow-xs space-y-1">
-              <div className="text-xs text-neutral-500">
-                Cereri studenți în așteptare
-              </div>
-              <div className="text-3xl font-bold text-neutral-900">
-                {pendingCount}
-              </div>
+              <div className="text-xs text-neutral-500">Cereri studenți în așteptare</div>
+              <div className="text-3xl font-bold text-neutral-900">{pendingCount}</div>
               <div className="text-xs text-neutral-500 pt-0.5">
                 necesită decizia reprezentantului de laborator
               </div>
@@ -302,9 +304,7 @@ export function ProfessorDashboardPage() {
               <div className="text-xs text-neutral-500">
                 Programări didactice și ședințe de laborator
               </div>
-              <div className="text-3xl font-bold text-neutral-900">
-                {profActivitiesCount}
-              </div>
+              <div className="text-3xl font-bold text-neutral-900">{profActivitiesCount}</div>
               <div className="text-xs text-neutral-500 pt-0.5">
                 cererea ta individuală sau de grupă este validată de reprezentantul de laborator
               </div>
@@ -317,7 +317,9 @@ export function ProfessorDashboardPage() {
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <div>
                 <h2 className="text-sm font-bold text-neutral-900">Catalogul departamentului</h2>
-                <p className="text-xs text-neutral-500">Acces la catalogul complet, dintr-un singur loc.</p>
+                <p className="text-xs text-neutral-500">
+                  Acces la catalogul complet, dintr-un singur loc.
+                </p>
               </div>
               <Button
                 variant="outline"
@@ -330,7 +332,7 @@ export function ProfessorDashboardPage() {
             </div>
 
             <div className="space-y-4 pt-1">
-              {displayCatalog.map((r: any) => (
+              {displayCatalog.map((r: Resource | (typeof DEMO_CATALOG_ITEMS)[number]) => (
                 <div
                   key={r.id}
                   onClick={() => navigate(`/resources/${r.id}`)}
@@ -352,7 +354,8 @@ export function ProfessorDashboardPage() {
                       {r.nume}
                     </div>
                     <div className="text-[11px] text-neutral-500 font-mono">
-                      {r.specs ? `${r.specs} · ` : ""}{r.cod_inventar} · {r.sala_cod}
+                      {"specs" in r && r.specs ? `${r.specs} · ` : ""}
+                      {r.cod_inventar} · {r.sala_cod}
                     </div>
                   </div>
                 </div>
@@ -360,267 +363,45 @@ export function ProfessorDashboardPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-5 space-y-4">
-            {canApproveRequests ? (
-              <>
-                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                  <h2 className="text-sm font-bold text-neutral-900">Aprobări cereri studenți</h2>
-                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-black text-white">
-                    {pendingCount} în așteptare
-                  </span>
-                </div>
-
-                <div className="space-y-4 pt-1">
-                  {pendingRequests.length > 0 ? (
-                    pendingRequests.map((req) => (
-                      <div key={req.id} className="p-4 rounded-xl border border-neutral-200 bg-white space-y-2 shadow-2xs">
-                        <div className="text-xs font-bold text-neutral-900">{req.utilizator_nume || "Student"}</div>
-                        <div className="text-xs text-neutral-800 font-semibold">{req.resursa_nume}</div>
-                        <div className="text-[11px] text-neutral-500 leading-snug">{req.scop}</div>
-                        <div className="text-[11px] text-neutral-500">
-                          {req.data_inceput ? `${new Date(req.data_inceput).toLocaleDateString("ro-RO")} · ${new Date(req.data_inceput).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}–${new Date(req.data_sfarsit).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}` : "26.10.2026 · 10:00–12:00"}
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setActionError(null)
-                            setRejectionReason("")
-                            setSelectedRequest(req)
-                          }}
-                          className="w-full h-8 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-200 font-medium rounded-lg mt-2"
-                        >
-                          Examinează cererea
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    demoApprovals.map((item) => (
-                      <div key={item.id} className="p-4 rounded-xl border border-neutral-200 bg-white space-y-2 shadow-2xs">
-                        <div className="text-xs font-bold text-neutral-900">{item.studentName}</div>
-                        <div className="text-xs text-neutral-800 font-semibold">{item.resourceName}</div>
-                        <div className="text-[11px] text-neutral-500 leading-snug">{item.scope}</div>
-                        <div className="text-[11px] text-neutral-500">{item.timeRange}</div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setActionError(null)
-                            setRejectionReason("")
-                            setSelectedDemoRequest(item)
-                          }}
-                          className="w-full h-8 text-xs bg-white text-neutral-900 hover:bg-neutral-50 border-neutral-200 font-medium rounded-lg mt-2"
-                        >
-                          Examinează cererea
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                  <h2 className="text-sm font-bold text-neutral-900">Activități didactice programate</h2>
-                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-800">
-                    {profActivitiesCount} activități
-                  </span>
-                </div>
-
-                <div className="space-y-3 pt-1">
-                  {myReservations.length > 0 ? (
-                    myReservations.map((req) => (
-                      <div key={req.id} className="p-4 rounded-xl border border-neutral-200 bg-white space-y-1.5 shadow-2xs">
-                        <div className="text-xs font-bold text-neutral-900">{req.resursa_nume}</div>
-                        <div className="text-[11px] text-neutral-600">{req.scop}</div>
-                        <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-neutral-400" />
-                          <span>
-                            {new Date(req.data_inceput).toLocaleDateString("ro-RO")} ·{" "}
-                            {new Date(req.data_inceput).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}–
-                            {new Date(req.data_sfarsit).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    DEMO_PROFESSOR_ACTIVITIES.map((act) => (
-                      <div key={act.id} className="p-4 rounded-xl border border-neutral-200 bg-white space-y-1.5 shadow-2xs">
-                        <div className="text-xs font-bold text-neutral-900">{act.course}</div>
-                        <div className="text-xs text-neutral-700 font-medium">{act.resourceName}</div>
-                        <div className="text-[11px] text-neutral-500">{act.timeRange} · {act.room}</div>
-                      </div>
-                    ))
-                  )}
-
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/professor/group-booking")}
-                    className="w-full h-9 text-xs border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-900 font-semibold rounded-xl mt-2"
-                  >
-                    Programează laborator pentru o grupă
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+          <ProfessorRequestsPanel
+            canApproveRequests={canApproveRequests}
+            pendingCount={pendingCount}
+            pendingRequests={pendingRequests}
+            demoApprovals={demoApprovals}
+            myReservations={myReservations}
+            profActivitiesCount={profActivitiesCount}
+            onExamineRequest={(req) => {
+              setActionError(null)
+              setRejectionReason("")
+              setSelectedRequest(req)
+            }}
+            onExamineDemoRequest={(item) => {
+              setActionError(null)
+              setRejectionReason("")
+              setSelectedDemoRequest(item)
+            }}
+            onNavigateGroupBooking={() => navigate("/professor/group-booking")}
+          />
         </div>
       </div>
 
-      {canApproveRequests && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-neutral-200 overflow-hidden">
-            <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-sm text-neutral-900">Examinare cerere de rezervare</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">Decizie de aprobare sau respingere de către reprezentantul de laborator</p>
-              </div>
-              <button onClick={() => setSelectedRequest(null)} className="text-neutral-400 hover:text-neutral-600">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
-                <div>
-                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Student</span>
-                  <span className="font-semibold text-neutral-900">{selectedRequest.utilizator_nume}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Email</span>
-                  <span className="text-neutral-800">{selectedRequest.utilizator_email}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Echipament</span>
-                  <span className="font-semibold text-neutral-900">{selectedRequest.resursa_nume}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Sală</span>
-                  <span className="text-neutral-800">{selectedRequest.sala_nume}</span>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-1">Scopul utilizării</span>
-                <p className="text-neutral-800 bg-neutral-50 p-3 rounded-xl border border-neutral-100 leading-relaxed">
-                  {selectedRequest.scop}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-1">Interval solicitat</span>
-                <p className="text-neutral-800 font-mono bg-neutral-50 p-2.5 rounded-xl border border-neutral-100">
-                  {new Date(selectedRequest.data_inceput).toLocaleDateString("ro-RO")} · {new Date(selectedRequest.data_inceput).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })} - {new Date(selectedRequest.data_sfarsit).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1">
-                <label className="block text-xs font-semibold text-neutral-700">
-                  Motiv respingere (obligatoriu doar pentru respingere)
-                </label>
-                <textarea
-                  rows={2}
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Introduceți motivul respingerii..."
-                  className="w-full text-xs p-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-neutral-100">
-                <Button
-                  variant="outline"
-                  onClick={() => handleReject(selectedRequest.id)}
-                  disabled={isActing}
-                  className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
-                >
-                  Respinge cererea
-                </Button>
-                <Button
-                  onClick={() => handleApprove(selectedRequest.id)}
-                  disabled={isActing}
-                  className="text-xs bg-black hover:bg-neutral-800 text-white"
-                >
-                  Aprobă cererea
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {canApproveRequests && selectedDemoRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-neutral-200 overflow-hidden">
-            <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-sm text-neutral-900">Examinare cerere de rezervare</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">Decizie de aprobare sau respingere de către reprezentantul de laborator</p>
-              </div>
-              <button onClick={() => setSelectedDemoRequest(null)} className="text-neutral-400 hover:text-neutral-600">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
-                <div>
-                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Student</span>
-                  <span className="font-semibold text-neutral-900">{selectedDemoRequest.studentName}</span>
-                </div>
-                <div>
-                  <span className="text-neutral-400 block text-[10px] uppercase font-bold">Echipament</span>
-                  <span className="font-semibold text-neutral-900">{selectedDemoRequest.resourceName}</span>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-1">Scopul utilizării</span>
-                <p className="text-neutral-800 bg-neutral-50 p-3 rounded-xl border border-neutral-100 leading-relaxed">
-                  {selectedDemoRequest.scope}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-1">Interval solicitat</span>
-                <p className="text-neutral-800 font-mono bg-neutral-50 p-2.5 rounded-xl border border-neutral-100">
-                  {selectedDemoRequest.timeRange}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1">
-                <label className="block text-xs font-semibold text-neutral-700">
-                  Motiv respingere (obligatoriu doar pentru respingere)
-                </label>
-                <textarea
-                  rows={2}
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Introduceți motivul respingerii..."
-                  className="w-full text-xs p-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-neutral-100">
-                <Button
-                  variant="outline"
-                  onClick={() => handleRejectDemo(selectedDemoRequest.id)}
-                  className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
-                >
-                  Respinge cererea
-                </Button>
-                <Button
-                  onClick={() => handleApproveDemo(selectedDemoRequest.id)}
-                  className="text-xs bg-black hover:bg-neutral-800 text-white"
-                >
-                  Aprobă cererea
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {canApproveRequests && (
+        <ProfessorApprovalModal
+          selectedRequest={selectedRequest}
+          selectedDemoRequest={selectedDemoRequest}
+          rejectionReason={rejectionReason}
+          onRejectionReasonChange={setRejectionReason}
+          isActing={isActing}
+          onCloseRequest={() => setSelectedRequest(null)}
+          onCloseDemoRequest={() => setSelectedDemoRequest(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onApproveDemo={handleApproveDemo}
+          onRejectDemo={handleRejectDemo}
+        />
       )}
     </AppLayout>
   )
 }
+
 export default ProfessorDashboardPage
