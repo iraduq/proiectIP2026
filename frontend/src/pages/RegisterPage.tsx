@@ -1,9 +1,10 @@
-import { useState } from "react"
+import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { AlertCircle } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
+import { AuthBrandingPanel } from "../components/auth/AuthBrandingPanel"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
-import { AlertCircle, Calendar, Info } from "lucide-react"
 
 export function RegisterPage() {
   const [lastName, setLastName] = useState("")
@@ -27,7 +28,6 @@ export function RegisterPage() {
     }
 
     setIsLoading(true)
-
     try {
       await register({
         first_name: firstName.trim(),
@@ -54,55 +54,7 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4 lg:p-8">
       <div className="w-full max-w-[1120px] min-h-[760px] bg-white rounded-3xl shadow-sm border border-neutral-200/60 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-        <div className="lg:col-span-5 bg-[#fafafa] border-b lg:border-b-0 lg:border-r border-neutral-200/70 lg:rounded-r-3xl p-8 lg:p-10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="px-2.5 py-1 rounded-full bg-neutral-900 text-white text-[11px] font-bold tracking-tight">
-                RRM
-              </span>
-              <span className="font-bold text-neutral-900 text-base tracking-tight">
-                RRM
-              </span>
-            </div>
-          </div>
-
-          <div className="my-auto py-8 space-y-5">
-            <div className="text-[11px] uppercase tracking-wider font-medium text-neutral-500 flex items-center gap-1.5">
-              <Info className="h-3.5 w-3.5 text-neutral-400" />
-              <span>SPAȚIUL TĂU DE LABORATOR</span>
-            </div>
-
-            <h1 className="text-2xl lg:text-[28px] font-bold text-neutral-900 leading-snug tracking-tight">
-              De la resursa potrivită
-              <br />
-              la următorul proiect.
-            </h1>
-
-            <p className="text-neutral-500 text-xs leading-relaxed max-w-sm">
-              Găsește echipamente, verifică disponibilitatea și organizează rezervările într-un singur loc.
-            </p>
-
-            <div className="p-3 rounded-2xl border border-neutral-200/80 bg-[#f5f5f5]/70 space-y-2.5 max-w-sm">
-              <div className="bg-neutral-900 text-white px-4 py-3.5 rounded-xl flex items-center gap-3 text-xs font-medium">
-                <span className="text-neutral-400 font-mono text-[11px]">01</span>
-                <span>Explorează catalogul de resurse</span>
-              </div>
-              <div className="bg-neutral-900 text-white px-4 py-3.5 rounded-xl flex items-center gap-3 text-xs font-medium">
-                <span className="text-neutral-400 font-mono text-[11px]">02</span>
-                <span>Alege un interval disponibil</span>
-              </div>
-              <div className="bg-neutral-900 text-white px-4 py-3.5 rounded-xl flex items-center gap-3 text-xs font-medium">
-                <span className="text-neutral-400 font-mono text-[11px]">03</span>
-                <span>Urmărește rezervările tale</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[11px] text-neutral-400 flex items-center gap-2">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
-            <span>Resource Research Manager · Acces conform rolului instituțional</span>
-          </div>
-        </div>
+        <AuthBrandingPanel />
 
         <div className="lg:col-span-7 bg-white flex items-center justify-center p-8 lg:p-16">
           <div className="w-full max-w-[360px] space-y-5">
@@ -125,9 +77,7 @@ export function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-neutral-800 block">
-                    Nume
-                  </label>
+                  <label className="text-xs font-semibold text-neutral-800 block">Nume</label>
                   <Input
                     type="text"
                     required
@@ -138,9 +88,7 @@ export function RegisterPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-neutral-800 block">
-                    Prenume
-                  </label>
+                  <label className="text-xs font-semibold text-neutral-800 block">Prenume</label>
                   <Input
                     type="text"
                     required
@@ -167,9 +115,7 @@ export function RegisterPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-neutral-800 block">
-                  Parolă
-                </label>
+                <label className="text-xs font-semibold text-neutral-800 block">Parolă</label>
                 <Input
                   type="password"
                   required
@@ -205,10 +151,7 @@ export function RegisterPage() {
                   <span>Ține-mă minte</span>
                 </label>
 
-                <Link
-                  to="/login"
-                  className="text-xs font-semibold text-neutral-800 hover:underline"
-                >
+                <Link to="/login" className="text-xs font-semibold text-neutral-800 hover:underline">
                   Ai uitat parola?
                 </Link>
               </div>
