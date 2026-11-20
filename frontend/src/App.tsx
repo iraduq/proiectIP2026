@@ -1,17 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider, useAuth } from "./context/AuthContext"
-import { LoginPage } from "./pages/LoginPage"
-import { RegisterPage } from "./pages/RegisterPage"
-import { WelcomePage } from "./pages/WelcomePage"
-import { DashboardPage } from "./pages/DashboardPage"
-import { AcademicAdminPage } from "./pages/AcademicAdminPage"
-import { RoomsPage } from "./pages/RoomsPage"
-import { ResourcesPage } from "./pages/ResourcesPage"
-import { ResourceDetailPage } from "./pages/ResourceDetailPage"
-import { ReservationsPage } from "./pages/ReservationsPage"
-import { TechnicalHistoryPage } from "./pages/TechnicalHistoryPage"
-import { ProfessorDashboardPage } from "./pages/ProfessorDashboardPage"
-import { GroupBookingPage } from "./pages/GroupBookingPage"
+import { LoginPage } from "./pages/auth/LoginPage"
+import { RegisterPage } from "./pages/auth/RegisterPage"
+import { WelcomePage } from "./pages/welcome/WelcomePage"
+import { DashboardPage } from "./pages/dashboard/DashboardPage"
+import { AcademicAdminPage } from "./pages/academic/AcademicAdminPage"
+import { AdminPage } from "./pages/admin/AdminPage"
+import { RoomsPage } from "./pages/rooms/RoomsPage"
+import { ResourcesPage } from "./pages/resources/ResourcesPage"
+import { ResourceDetailPage } from "./pages/resources/ResourceDetailPage"
+import { ReservationsPage } from "./pages/reservations/ReservationsPage"
+import { TechnicalHistoryPage } from "./pages/technical/TechnicalHistoryPage"
+import { ProfessorDashboardPage } from "./pages/professor/ProfessorDashboardPage"
+import { GroupBookingPage } from "./pages/professor/GroupBookingPage"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -90,6 +91,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <TechnicalHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             }
           />
