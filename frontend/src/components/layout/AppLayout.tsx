@@ -17,6 +17,7 @@ import {
   Cpu,
   Calendar,
   Wrench,
+  ShieldCheck,
 } from "lucide-react"
 import { Input } from "../ui/input"
 
@@ -121,6 +122,7 @@ export function AppLayout({ children, breadcrumbs = ["Spațiu de lucru", "Panou 
         { label: "Rezervările mele", path: "/reservations", icon: Calendar },
         ...(canViewTechnical ? [{ label: "Jurnal tehnic", path: "/technical-history", icon: Wrench }] : []),
         { label: "Laboratoare și săli", path: "/rooms", icon: DoorOpen },
+        { label: "Administrare", path: "/admin", icon: ShieldCheck },
         { label: "Structură academică", path: "/admin/academic", icon: Building2 },
       ]
     : [

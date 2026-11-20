@@ -5,6 +5,7 @@ import { RegisterPage } from "./pages/RegisterPage"
 import { WelcomePage } from "./pages/WelcomePage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { AcademicAdminPage } from "./pages/AcademicAdminPage"
+import { AdminPage } from "./pages/admin/AdminPage"
 import { RoomsPage } from "./pages/RoomsPage"
 import { ResourcesPage } from "./pages/ResourcesPage"
 import { ResourceDetailPage } from "./pages/ResourceDetailPage"
@@ -90,6 +91,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <TechnicalHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             }
           />
