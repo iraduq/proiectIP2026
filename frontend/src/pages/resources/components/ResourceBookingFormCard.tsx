@@ -1,9 +1,11 @@
-import { AlertCircle, CheckCircle2, Clock } from "lucide-react"
+import { Clock } from "lucide-react"
 import { Card } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Textarea } from "../../../components/ui/textarea"
-import { CALENDAR_HOURS } from "./ResourceAvailabilityCalendar"
+import { BookingIntervalControls } from "./BookingIntervalControls"
+import { BookingQuickDuration } from "./BookingQuickDuration"
+import { BookingStatusNotice } from "./BookingStatusNotice"
 
 interface ResourceBookingFormCardProps {
   bookingMode: "HOURLY" | "MULTIDAY"
@@ -117,143 +119,32 @@ export function ResourceBookingFormCard({
         </Badge>
       </div>
 
-      <div className="space-y-2">
-        <div className="text-xs font-semibold text-neutral-700">
-          Alege rapid durata rezervării (ore sau zile):
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {[1, 2, 4, 6, 8].map((h) => {
-            const isSelected = bookingMode === "HOURLY" && durationHours === h
-            return (
-              <button
-                key={`h-${h}`}
-                type="button"
-                onClick={() => onQuickHours(h)}
-                className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
-                  isSelected
-                    ? "bg-neutral-950 text-white"
-                    : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800"
-                }`}
-              >
-                {h} {h === 1 ? "oră" : "ore"}
-              </button>
-            )
-          })}
-          {[1, 2, 3, 5, 7, 14].map((dCount) => {
-            const isSelected = bookingMode === "MULTIDAY" && multiDaysCount === dCount
-            return (
-              <button
-                key={`d-${dCount}`}
-                type="button"
-                onClick={() => onQuickDays(dCount)}
-                className={`h-8 px-3 rounded-xl text-xs font-semibold transition-colors ${
-                  isSelected
-                    ? "bg-neutral-950 text-white"
-                    : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200"
-                }`}
-              >
-                {dCount} {dCount === 1 ? "zi" : "zile"}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <BookingQuickDuration
+        bookingMode={bookingMode}
+        durationHours={durationHours}
+        multiDaysCount={multiDaysCount}
+        onQuickHours={onQuickHours}
+        onQuickDays={onQuickDays}
+      />
 
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-neutral-700">Data preluării</label>
-            <input
-              type="date"
-              value={selectedIsoDate}
-              min={minIsoDate}
-              onChange={(e) => {
-                if (e.target.value) {
-                  onSelectedIsoDateChange(e.target.value)
-                }
-              }}
-              className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-neutral-700">Ora de început</label>
-            <select
-              value={selectedStartHour}
-              onChange={(e) => onSelectedStartHourChange(Number(e.target.value))}
-              className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-            >
-              {CALENDAR_HOURS.map((h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, "0")}:00
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {bookingMode === "HOURLY" ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-neutral-600 font-medium">Durată rezervare (ore)</span>
-              <span className="font-bold text-neutral-900">
-                {durationHours} {durationHours === 1 ? "oră" : "ore"} ({startStr}–{endStr})
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-neutral-400">
-              <span>1h</span>
-              <input
-                type="range"
-                min={1}
-                max={8}
-                value={durationHours}
-                onChange={(e) => onDurationHoursChange(Number(e.target.value))}
-                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-              />
-              <span>8h</span>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-neutral-600 font-medium">Număr de zile</span>
-                <span className="font-bold text-neutral-900">
-                  {multiDaysCount} {multiDaysCount === 1 ? "zi" : "zile"} (până pe {endDisplayDate})
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-neutral-400 pt-1">
-                <span>1 zi</span>
-                <input
-                  type="range"
-                  min={1}
-                  max={14}
-                  value={multiDaysCount}
-                  onChange={(e) => onMultiDaysCountChange(Number(e.target.value))}
-                  className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
-                />
-                <span>14 zile</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-neutral-700">
-                Ora returnării (în ultima zi)
-              </label>
-              <select
-                value={multiEndHour}
-                onChange={(e) => onMultiEndHourChange(Number(e.target.value))}
-                className="w-full h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-              >
-                {CALENDAR_HOURS.map((h) => (
-                  <option key={h} value={h + 1}>
-                    {String(h + 1).padStart(2, "0")}:00
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
+        <BookingIntervalControls
+          bookingMode={bookingMode}
+          durationHours={durationHours}
+          onDurationHoursChange={onDurationHoursChange}
+          multiDaysCount={multiDaysCount}
+          onMultiDaysCountChange={onMultiDaysCountChange}
+          multiEndHour={multiEndHour}
+          onMultiEndHourChange={onMultiEndHourChange}
+          selectedIsoDate={selectedIsoDate}
+          minIsoDate={minIsoDate}
+          onSelectedIsoDateChange={onSelectedIsoDateChange}
+          selectedStartHour={selectedStartHour}
+          onSelectedStartHourChange={onSelectedStartHourChange}
+          startStr={startStr}
+          endStr={endStr}
+          endDisplayDate={endDisplayDate}
+        />
 
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
@@ -276,43 +167,12 @@ export function ResourceBookingFormCard({
           <p className="text-[11px] text-neutral-400">Maxim 200 de caractere.</p>
         </div>
 
-        {hasSlotConflict ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-3 flex items-start gap-2.5">
-            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-            <div className="text-xs">
-              <p className="font-bold text-rose-800">
-                Interval indisponibil: suprapunere cu un slot ocupat
-              </p>
-              <p className="text-rose-700 text-[11px] mt-0.5">
-                Intervalul {formattedSelectedRange} conține ore deja rezervate. Alege alt interval liber.
-              </p>
-            </div>
-          </div>
-        ) : activeCount < maxLimit ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 flex items-start gap-2.5">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="text-xs">
-              <p className="font-bold text-emerald-800">
-                Cotă disponibilă: {activeCount} rezervări active din max. {maxLimit}
-              </p>
-              <p className="text-emerald-700 text-[11px] mt-0.5">
-                Poți adăuga această rezervare fără a depăși limita simultană.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 flex items-start gap-2.5">
-            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs">
-              <p className="font-bold text-amber-900">
-                Limită cotă atinsă: {activeCount} / {maxLimit} resurse simultane
-              </p>
-              <p className="text-amber-700 text-[11px] mt-0.5">
-                Ai atins plafonul maxim de 4 resurse simultan.
-              </p>
-            </div>
-          </div>
-        )}
+        <BookingStatusNotice
+          hasSlotConflict={hasSlotConflict}
+          formattedSelectedRange={formattedSelectedRange}
+          activeCount={activeCount}
+          maxLimit={maxLimit}
+        />
 
         <Button
           type="submit"
