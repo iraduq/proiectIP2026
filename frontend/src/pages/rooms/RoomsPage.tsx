@@ -18,7 +18,8 @@ export function RoomsPage() {
     user?.rol === "RESPONSABIL_LABORATOR" ||
     Boolean(user?.permissions?.includes("rooms:write"))
 
-  const catalog = useRoomsCatalog(user?.id_utilizator)
+  const restrictedEdit = user?.rol === "RESPONSABIL_LABORATOR"
+  const catalog = useRoomsCatalog(user?.id_utilizator, restrictedEdit)
 
   return (
     <AppLayout breadcrumbs={["Spațiu de lucru", "Laboratoare și săli"]}>
@@ -98,6 +99,7 @@ export function RoomsPage() {
         formData={catalog.formData}
         formError={catalog.formError}
         isSubmitting={catalog.isSubmitting}
+        restricted={restrictedEdit && catalog.editingRoom !== null}
         departments={catalog.departments}
         onClose={() => catalog.setIsModalOpen(false)}
         onChange={catalog.setFormData}

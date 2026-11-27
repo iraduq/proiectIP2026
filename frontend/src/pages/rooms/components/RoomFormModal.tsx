@@ -18,6 +18,7 @@ interface RoomFormModalProps {
   formData: RoomFormState
   formError: string | null
   isSubmitting: boolean
+  restricted?: boolean
   departments: Department[]
   onClose: () => void
   onChange: (next: RoomFormState) => void
@@ -30,6 +31,7 @@ export function RoomFormModal({
   formData,
   formError,
   isSubmitting,
+  restricted = false,
   departments,
   onClose,
   onChange,
@@ -63,6 +65,12 @@ export function RoomFormModal({
             </div>
           )}
 
+          {restricted && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 font-medium">
+              Ca responsabil de laborator poți modifica doar capacitatea și descrierea. Celelalte câmpuri sunt gestionate de administrator.
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label htmlFor="departament_id" className="text-xs font-semibold text-neutral-700">
               Departament
@@ -70,6 +78,7 @@ export function RoomFormModal({
             <select
               id="departament_id"
               required
+              disabled={restricted}
               value={formData.departament_id}
               onChange={(e) => onChange({ ...formData, departament_id: e.target.value })}
               className="w-full h-9 rounded-md border border-neutral-200 bg-white px-3 text-sm"
@@ -92,6 +101,7 @@ export function RoomFormModal({
               </label>
               <Input
                 id="cod"
+                disabled={restricted}
                 required
                 placeholder="UPT-AC-CTI-L1"
                 value={formData.cod}
@@ -104,6 +114,7 @@ export function RoomFormModal({
               </label>
               <Input
                 id="etaj"
+                disabled={restricted}
                 type="number"
                 min={-2}
                 max={10}
@@ -120,6 +131,7 @@ export function RoomFormModal({
             </label>
             <Input
               id="nume"
+              disabled={restricted}
               required
               placeholder="Laborator inteligență artificială (Lab 204)"
               value={formData.nume}

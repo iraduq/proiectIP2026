@@ -18,7 +18,7 @@ const INITIAL_ROOM_FORM: RoomFormState = {
   descriere: "",
 }
 
-export function useRoomsCatalog(userId?: number) {
+export function useRoomsCatalog(userId?: number, restrictedEdit = false) {
   const [rooms, setRooms] = useState<Room[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [faculties, setFaculties] = useState<Faculty[]>([])
@@ -181,7 +181,12 @@ export function useRoomsCatalog(userId?: number) {
     try {
       const etajNum = Number(formData.etaj) || 0
       const capNum = Number(formData.capacitate) || 20
-      if (editingRoom) {
+      if (editingRoom && restrictedEdit) {
+        await academicApi.updateRoom(editingRoom.id, {
+          capacitate: capNum,
+          descriere: formData.descriere.trim() || null,
+        })
+      } else if (editingRoom) {
         await academicApi.updateRoom(editingRoom.id, {
           nume: formData.nume.trim(),
           cod: formData.cod.trim().toUpperCase(),
