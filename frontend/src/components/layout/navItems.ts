@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import {
-  Building2, Calendar, Cpu, DoorOpen, LayoutDashboard, ShieldCheck, Wrench,
+  Building2, Calendar, Cpu, DoorOpen, FlaskConical, LayoutDashboard, ShieldCheck, Wrench,
 } from "lucide-react"
 import type { User } from "../../types"
 
@@ -21,6 +21,7 @@ export function getNavItems(user: User | null | undefined): NavItem[] {
   if (user?.rol === "RESPONSABIL_LABORATOR") {
     return [
       { label: "Panou de bord", path: "/dashboard", icon: LayoutDashboard },
+      { label: "Laboratorul meu", path: "/lab", icon: FlaskConical },
       { label: "Gestiune laborator", path: "/professor", icon: Building2 },
       { label: "Catalog resurse", path: "/resources", icon: Cpu },
       { label: "Rezervări și cereri", path: "/reservations", icon: Calendar },

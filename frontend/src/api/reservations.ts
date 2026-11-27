@@ -62,6 +62,13 @@ export const reservationsApi = {
     return res.data
   },
 
+  async handOverReservation(id: number, stareInitiala: "FUNCTIONAL" | "VERIFICARE" = "FUNCTIONAL"): Promise<Reservation> {
+    const res = await api.post<Reservation>(`/reservations/${id}/handover`, null, {
+      params: { stare_initiala: stareInitiala },
+    })
+    return res.data
+  },
+
   async returnReservation(
     id: number,
     params?: { stare_echipament?: string; observatii?: string }

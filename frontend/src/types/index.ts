@@ -166,6 +166,8 @@ export interface Reservation {
   stare: StareRezervare
   scop: string
   motiv_respingere?: string | null
+  preluat_la?: string | null
+  stare_predare?: string | null
   created_at: string
   updated_at: string
 }

@@ -12,6 +12,7 @@ import { ResourceDetailPage } from "./pages/resources/ResourceDetailPage"
 import { ReservationsPage } from "./pages/reservations/ReservationsPage"
 import { TechnicalHistoryPage } from "./pages/technical/TechnicalHistoryPage"
 import { ProfessorDashboardPage } from "./pages/professor/ProfessorDashboardPage"
+import { LabPage } from "./pages/lab/LabPage"
 import { GroupBookingPage } from "./pages/professor/GroupBookingPage"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -47,6 +48,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lab"
+            element={
+              <ProtectedRoute>
+                <LabPage />
               </ProtectedRoute>
             }
           />
