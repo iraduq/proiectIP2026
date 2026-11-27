@@ -338,3 +338,13 @@ class RoomFieldsRestrictedError(AppException):
             code="room_fields_restricted",
             details={"restricted_fields": fields},
         )
+
+
+class ResourceFieldsRestrictedError(AppException):
+    def __init__(self, fields: list[str]) -> None:
+        super().__init__(
+            message="Responsabilul de laborator nu poate modifica aceste câmpuri ale resursei: " + ", ".join(fields) + ".",
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="resource_fields_restricted",
+            details={"restricted_fields": fields},
+        )

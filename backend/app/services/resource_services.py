@@ -10,7 +10,7 @@ from app.api.schemas.resources import (
     ResourceUpdate,
 )
 from app.db.models import Resource, StareTehnica, User, UserRole
-from app.exceptions.academic_exceptions import RoomInactiveError
+from app.exceptions.academic_exceptions import ResourceFieldsRestrictedError, RoomInactiveError
 from app.exceptions.exceptions import (
     AppException,
     CategoryNotFoundError,
@@ -22,6 +22,7 @@ from app.repositories.category_repository import CategoryRepository
 from app.repositories.resource_repository import ResourceRepository
 from app.repositories.room_repository import room_repository
 from app.utils.access import is_structure_admin, is_student
+from app.utils.structure_rules import RESOURCE_RESPONSIBLE_EDITABLE_FIELDS
 
 resource_repository = ResourceRepository()
 category_repository = CategoryRepository()
@@ -165,6 +166,11 @@ class ResourceService:
     ) -> ResourceResponse:
         res = await self.get_by_id(db, resource_id)
         changes = data.model_dump(exclude_unset=True)
+
+        if not is_structure_admin(actor):
+            restricted = sorted(set(changes) - RESOURCE_RESPONSIBLE_EDITABLE_FIELDS)
+            if restricted:
+                raise ResourceFieldsRestrictedError(restricted)
 
         if "cod_inventar" in changes and changes["cod_inventar"]:
             new_code = changes["cod_inventar"].strip()

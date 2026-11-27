@@ -5,6 +5,7 @@ MAX_ROOMS_PER_RESPONSIBLE = 25
 DEPARTMENT_HEAD_ROLES = frozenset({UserRole.PROFESOR.value})
 ROOM_RESPONSIBLE_ROLES = frozenset({UserRole.RESPONSABIL_LABORATOR.value, UserRole.PROFESOR.value})
 ROOM_RESPONSIBLE_EDITABLE_FIELDS = frozenset({"descriere", "capacitate"})
+RESOURCE_RESPONSIBLE_EDITABLE_FIELDS = frozenset({"descriere", "specificatii", "stare_tehnica", "sala_id"})
 ROOM_FLOOR_MIN = -3
 ROOM_FLOOR_MAX = 30
 ROOM_CAPACITY_LIMITS: dict[TipSala, tuple[int, int]] = {
