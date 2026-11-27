@@ -123,6 +123,8 @@ class ReservationResponse(BaseModel):
     stare: StareRezervare
     scop: str
     motiv_respingere: Optional[str] = None
+    preluat_la: Optional[datetime] = None
+    stare_predare: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

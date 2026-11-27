@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas.resources import (
@@ -127,3 +127,13 @@ async def return_reservation(
         stare_echipament=stare_echipament,
         observatii=observatii,
     )
+
+
+@router.post("/{reservation_id}/handover", response_model=ReservationResponse)
+async def hand_over_reservation(
+    reservation_id: int,
+    stare_initiala: Literal["FUNCTIONAL", "VERIFICARE"] = Query(default="FUNCTIONAL"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission(PermissionCode.BOOKINGS_RETURN)),
+) -> ReservationResponse:
+    return await reservation_service.hand_over(db, current_user, reservation_id, stare_initiala)

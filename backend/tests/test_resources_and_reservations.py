@@ -207,6 +207,19 @@ async def test_reservation_rules_and_lifecycle(client: AsyncClient, db_session: 
     assert res_approve.status_code == 200
     assert res_approve.json()["stare"] == "APROBATA"
 
+    res_prof_handover = await client.post(f"/api/reservations/{booking_id}/handover", headers=prof_headers)
+    assert res_prof_handover.status_code == 403
+
+    res_handover = await client.post(
+        f"/api/reservations/{booking_id}/handover?stare_initiala=VERIFICARE", headers=manager_headers
+    )
+    assert res_handover.status_code == 200
+    assert res_handover.json()["preluat_la"] is not None
+    assert res_handover.json()["stare_predare"] == "VERIFICARE"
+
+    res_handover_again = await client.post(f"/api/reservations/{booking_id}/handover", headers=manager_headers)
+    assert res_handover_again.status_code >= 400
+
     res_prof_return = await client.post(f"/api/reservations/{booking_id}/return", headers=prof_headers)
     assert res_prof_return.status_code == 403
 
@@ -296,3 +309,26 @@ async def test_resource_image_url_population(client: AsyncClient, db_session: As
     assert len(items) > 0
     with_images = [item for item in items if item.get("imagine_url")]
     assert len(with_images) > 0
+
+
+@pytest.mark.asyncio
+async def test_lab_responsible_resource_field_restrictions(client: AsyncClient, db_session: AsyncSession) -> None:
+    await seed_all(db_session)
+    resource = (await db_session.execute(select(Resource).order_by(Resource.id.asc()))).scalars().first()
+    assert resource is not None
+    room = await db_session.get(Room, resource.sala_id)
+    manager = await db_session.get(User, room.responsabil_id)
+    token = await get_auth_token(client, manager.email)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res_forbidden = await client.patch(
+        f"/api/resources/{resource.id}", headers=headers, json={"nume": "Nume schimbat"}
+    )
+    assert res_forbidden.status_code == 403
+    assert res_forbidden.json()["code"] == "resource_fields_restricted"
+
+    res_ok = await client.patch(
+        f"/api/resources/{resource.id}", headers=headers, json={"descriere": "Descriere actualizată"}
+    )
+    assert res_ok.status_code == 200
+    assert res_ok.json()["descriere"] == "Descriere actualizată"

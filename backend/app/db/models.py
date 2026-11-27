@@ -263,6 +263,8 @@ class Reservation(TimestampMixin, Base):
     )
     scop = Column(String(500), nullable=False)
     motiv_respingere = Column(String(500), nullable=True)
+    preluat_la = Column(DateTime(timezone=True), nullable=True)
+    stare_predare = Column(String(20), nullable=True)
 
     resource = relationship("Resource", back_populates="reservations", lazy="joined")
     user = relationship("User", lazy="joined")

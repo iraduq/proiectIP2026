@@ -69,6 +69,8 @@ class ReservationService:
             stare=r.stare,
             scop=r.scop,
             motiv_respingere=r.motiv_respingere,
+            preluat_la=r.preluat_la,
+            stare_predare=r.stare_predare,
             created_at=r.created_at,
             updated_at=r.updated_at,
         )
@@ -264,6 +266,38 @@ class ReservationService:
         detailed = await reservation_repository.get_detailed(db, reservation.id)
         return self._to_response(detailed or reservation)
 
+    @staticmethod
+    def _ensure_custody_rights(actor: User, reservation: Reservation) -> None:
+        if is_structure_admin(actor):
+            return
+        room = reservation.resource.room if reservation.resource else None
+        is_room_resp = (
+            actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value
+            and room is not None
+            and room.responsabil_id == actor.id_utilizator
+        )
+        if not is_room_resp:
+            raise UnauthorizedAccessError(
+                "Doar responsabilul de laborator al acestei săli sau un administrator poate efectua predarea/recepția."
+            )
+
+    async def hand_over(
+        self,
+        db: AsyncSession,
+        actor: User,
+        reservation_id: int,
+        stare_initiala: str = "FUNCTIONAL",
+    ) -> ReservationResponse:
+        reservation = await self.get_by_id(db, reservation_id)
+        self._ensure_custody_rights(actor, reservation)
+        if reservation.stare != StareRezervare.APROBATA or reservation.preluat_la is not None:
+            raise ReservationStateTransitionError(reservation.stare.value, "PRELUATA")
+        reservation.preluat_la = datetime.now(timezone.utc)
+        reservation.stare_predare = stare_initiala
+        await db.commit()
+        detailed = await reservation_repository.get_detailed(db, reservation.id)
+        return self._to_response(detailed or reservation)
+
     async def return_reservation(
         self,
         db: AsyncSession,
@@ -275,15 +309,7 @@ class ReservationService:
         reservation = await self.get_by_id(db, reservation_id)
         current_state = reservation.stare
 
-        is_admin = is_structure_admin(actor)
-        is_room_resp = (
-            actor.role_rel.name == UserRole.RESPONSABIL_LABORATOR.value
-            and reservation.resource
-            and reservation.resource.room
-            and reservation.resource.room.responsabil_id == actor.id_utilizator
-        )
-        if not is_admin and not is_room_resp:
-            raise UnauthorizedAccessError("Doar responsabilul de laborator al acestei săli sau un administrator poate efectua recepția returului.")
+        self._ensure_custody_rights(actor, reservation)
         if current_state != StareRezervare.APROBATA:
             raise ReservationStateTransitionError(current_state.value, StareRezervare.FINALIZATA.value)
 
